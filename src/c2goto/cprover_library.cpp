@@ -140,7 +140,7 @@ void add_cprover_library(contextt &, const messaget &)
 
 #else
 
-void add_cprover_library(contextt &context, const messaget &message_handler)
+void add_cprover_library(contextt &context)
 {
   if(config.ansi_c.lib == configt::ansi_ct::libt::LIB_NONE)
     return;

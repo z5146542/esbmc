@@ -76,8 +76,7 @@ public:
     const namespacet &ns,
     optionst &opts,
     std::shared_ptr<symex_targett> target,
-    contextt &context,
-    const messaget &message_handler);
+    contextt &context);
 
   /**
    *  Default destructor.

@@ -80,8 +80,7 @@ public:
     std::shared_ptr<symex_targett> _target,
     contextt &context,
     std::shared_ptr<ex_state_level2t> l2init,
-    optionst &options,
-    const messaget &message_handler);
+    optionst &options);
 
   /**
    *  Default copy constructor.
