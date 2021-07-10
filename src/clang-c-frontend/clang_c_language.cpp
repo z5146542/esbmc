@@ -23,6 +23,7 @@ Author: Daniel Kroening, kroening@cs.cmu.edu
 #include <clang-c-frontend/expr2c.h>
 #include <sstream>
 #include <util/c_link.h>
+#include <util/message.h>
 
 languaget *new_clang_c_language()
 {
@@ -72,7 +73,7 @@ void clang_c_languaget::build_compiler_args(const std::string &&tmp_dir)
     break;
 
   default:
-    log_error("Unknown word size", config.ansi_c.word_size);
+    log_error("Unknown word size", std::to_string(config.ansi_c.word_size));
     abort();
   }
 
@@ -194,7 +195,7 @@ bool clang_c_languaget::parse(const std::string &path)
   // preprocessing
 
   std::ostringstream o_preprocessed;
-  if(preprocess(path, o_preprocessed, msg))
+  if(preprocess(path, o_preprocessed))
     return true;
 
   // Force the file type, .c for the C frontend and .cpp for the C++ one
@@ -222,17 +223,17 @@ bool clang_c_languaget::parse(const std::string &path)
 
 bool clang_c_languaget::typecheck(contextt &context, const std::string &module)
 {
-  contextt new_context(msg);
+  contextt new_context;
 
-  clang_c_convertert converter(new_context, ASTs, msg);
+  clang_c_convertert converter(new_context, ASTs);
   if(converter.convert())
     return true;
 
-  clang_c_adjust adjuster(new_context, msg);
+  clang_c_adjust adjuster(new_context);
   if(adjuster.adjust())
     return true;
 
-  if(c_link(context, new_context, msg, module))
+  if(c_link(context, new_context, module))
     return true;
 
   return false;
@@ -244,22 +245,19 @@ void clang_c_languaget::show_parse(std::ostream &)
     (*translation_unit).getASTContext().getTranslationUnitDecl()->dump();
 }
 
-bool clang_c_languaget::preprocess(
-  const std::string &,
-  std::ostream &,
-  const messaget &)
+bool clang_c_languaget::preprocess(const std::string &, std::ostream &)
 {
 // TODO: Check the preprocess situation.
 #if 0
-  return c_preprocess(path, outstream, false, message_handler);
+  return c_preprocess(path, outstream, false);
 #endif
   return false;
 }
 
 bool clang_c_languaget::final(contextt &context)
 {
-  add_cprover_library(context, msg);
-  return clang_main(context, msg);
+  add_cprover_library(context);
+  return clang_main(context);
 }
 
 std::string clang_c_languaget::internal_additions()

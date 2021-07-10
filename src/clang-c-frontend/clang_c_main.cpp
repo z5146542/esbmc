@@ -3,7 +3,7 @@
 #include <util/c_types.h>
 #include <util/config.h>
 #include <util/expr_util.h>
-
+#include <util/message.h>
 #include <util/namespace.h>
 #include <util/std_code.h>
 #include <util/std_expr.h>
@@ -47,7 +47,7 @@ static inline void static_lifetime_init(const contextt &context, codet &dest)
   });
 }
 
-bool clang_main(contextt &context, const messaget &message_handler)
+bool clang_main(contextt &context)
 {
   irep_idt main_symbol;
 
@@ -70,21 +70,14 @@ bool clang_main(contextt &context, const messaget &message_handler)
 
   if(matches.empty())
   {
-    messaget message(message_handler);
-    message.error("main symbol `" + main + "' not found");
+    log_error("main symbol", main, "not found");
     return true; // give up
   }
 
   if(matches.size() >= 2)
   {
-    messaget message(message_handler);
-    if(matches.size() == 2)
-      message.error("warning: main symbol `" + main + "' is ambiguous");
-    else
-    {
-      message.error("main symbol `" + main + "' is ambiguous");
-      return true;
-    }
+    log_error("main symbol", main, "is ambiguous");
+    return true;
   }
 
   main_symbol = matches.front();
@@ -276,7 +269,7 @@ bool clang_main(contextt &context, const messaget &message_handler)
 
   if(context.move(new_symbol))
   {
-    message_handler.error("main already defined by another language module");
+    log_error("main already defined by another language module");
     return true;
   }
 

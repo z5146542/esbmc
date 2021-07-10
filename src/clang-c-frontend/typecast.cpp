@@ -1,6 +1,7 @@
 #include <clang-c-frontend/typecast.h>
 #include <util/c_typecast.h>
 #include <util/c_types.h>
+#include <util/message.h>
 #include <util/simplify_expr_class.h>
 #include <stdexcept>
 #include <sstream>
@@ -51,8 +52,7 @@ void clang_c_convertert::gen_typecast_to_union(exprt &e, const typet &t)
 
   /* We should never reach here since clang frontend already checks for this
    * however... we should prevent any funny things to happen */
-  std::ostringstream oss;
-  oss << "Couldn't map type " << e.type().pretty_name() << " into the union";
-  log_error(oss.str());
+  log_error(
+    "Couldn't map type", e.type().pretty_name().as_string(), "into the union");
   abort();
 }
