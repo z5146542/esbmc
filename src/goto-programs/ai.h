@@ -39,13 +39,8 @@ class ai_baset
 public:
   typedef ai_domain_baset statet;
 
-  ai_baset()
-  {
-  }
-
-  virtual ~ai_baset()
-  {
-  }
+  ai_baset() = default;
+  virtual ~ai_baset() = default;
 
   /// Running the interpreter
   void operator()(const goto_programt &goto_program, const namespacet &ns)
@@ -91,10 +86,8 @@ public:
   {
   }
 
-  virtual void output(
-    const goto_functionst &goto_functions,
-    std::ostream &out,
-    const messaget &msg) const;
+  virtual void
+  output(const goto_functionst &goto_functions, std::ostream &out) const;
 
 protected:
   // overload to add a factory

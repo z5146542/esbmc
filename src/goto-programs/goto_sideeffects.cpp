@@ -11,6 +11,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/cprover_prefix.h>
 #include <util/expr_util.h>
 #include <util/i2string.h>
+#include <util/message.h>
 #include <util/rename.h>
 #include <util/std_expr.h>
 
@@ -111,10 +112,10 @@ void goto_convertt::remove_sideeffects(
 
     const locationt location = expr.location();
 
-    goto_programt tmp_true(get_message_handler());
+    goto_programt tmp_true;
     remove_sideeffects(if_expr.true_case(), tmp_true, result_is_used);
 
-    goto_programt tmp_false(get_message_handler());
+    goto_programt tmp_false;
     remove_sideeffects(if_expr.false_case(), tmp_false, result_is_used);
 
     if(result_is_used)
@@ -312,8 +313,8 @@ void goto_convertt::remove_sideeffects(
     }
     else
     {
-      str << "cannot remove side effect (" << statement << ")";
-      throw 0;
+      log_error("cannot remove side effect", statement.as_string());
+      abort();
     }
   }
 }
@@ -341,9 +342,9 @@ void goto_convertt::remove_assignment(
   {
     if(expr.operands().size() != 2)
     {
-      err_location(expr);
-      str << statement << " takes two arguments";
-      throw 0;
+      log_error(statement.as_string(), "takes two arguments");
+      expr.dump();
+      abort();
     }
 
     exprt rhs;
@@ -422,9 +423,9 @@ void goto_convertt::remove_assignment(
     }
     else
     {
-      err_location(expr);
-      str << statement << " not yet supported";
-      throw 0;
+      log_error(statement.as_string(), "not yet supported");
+      expr.dump();
+      abort();
     }
 
     rhs.copy_to_operands(expr.op0(), expr.op1());
@@ -468,9 +469,9 @@ void goto_convertt::remove_pre(
 
   if(expr.operands().size() != 1)
   {
-    err_location(expr);
-    str << statement << " takes one argument";
-    throw 0;
+    log_error(statement.as_string(), "takes one argument");
+    expr.dump();
+    abort();
   }
 
   exprt rhs;
@@ -517,8 +518,9 @@ void goto_convertt::remove_pre(
       constant_type = op_type;
     else
     {
-      err_location(expr);
-      throw "no constant one of type " + op_type.to_string();
+      log_error("no constant one of type", op_type.to_string());
+      expr.dump();
+      abort();
     }
 
     exprt constant = gen_one(constant_type);
@@ -554,9 +556,9 @@ void goto_convertt::remove_post(
 
   if(expr.operands().size() != 1)
   {
-    err_location(expr);
-    str << statement << " takes one argument";
-    throw 0;
+    log_error(statement.as_string(), "takes one argument");
+    expr.dump();
+    abort();
   }
 
   exprt rhs;
@@ -603,8 +605,9 @@ void goto_convertt::remove_post(
       constant_type = op_type;
     else
     {
-      err_location(expr);
-      throw "no constant one of type " + op_type.to_string();
+      log_error("no constant one of type", op_type.to_string());
+      expr.dump();
+      abort();
     }
 
     exprt constant = gen_one(constant_type);
@@ -617,7 +620,7 @@ void goto_convertt::remove_post(
   code_assignt assignment(expr.op0(), rhs);
   assignment.location() = expr.location();
 
-  goto_programt tmp(get_message_handler());
+  goto_programt tmp;
   convert(assignment, tmp);
 
   // fix up the expression, if needed
@@ -701,7 +704,7 @@ void goto_convertt::remove_function_call(
   assignment.copy_to_operands(symbol_expr(new_symbol));
   assignment.move_to_operands(call);
 
-  goto_programt tmp_program(get_message_handler());
+  goto_programt tmp_program;
   convert(assignment, tmp_program);
   dest.destructive_append(tmp_program);
 
@@ -762,7 +765,7 @@ void goto_convertt::remove_temporary_object(exprt &expr, goto_programt &dest)
     assignment.copy_to_operands(symbol_expr(new_symbol));
     assignment.move_to_operands(expr.op0());
 
-    goto_programt tmp_program(get_message_handler());
+    goto_programt tmp_program;
     convert(assignment, tmp_program);
     dest.destructive_append(tmp_program);
   }
@@ -773,7 +776,7 @@ void goto_convertt::remove_temporary_object(exprt &expr, goto_programt &dest)
     exprt initializer = static_cast<const exprt &>(expr.initializer());
     replace_new_object(symbol_expr(new_symbol), initializer);
 
-    goto_programt tmp_program(get_message_handler());
+    goto_programt tmp_program;
     convert(to_code(initializer), tmp_program);
     dest.destructive_append(tmp_program);
   }
@@ -834,7 +837,7 @@ void goto_convertt::remove_statement_expression(
     throw "statement_expression expects expression or assignment";
 
   {
-    goto_programt tmp(get_message_handler());
+    goto_programt tmp;
     convert(code, tmp);
     dest.destructive_append(tmp);
   }

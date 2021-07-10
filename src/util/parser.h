@@ -3,7 +3,7 @@
 
 #include <string>
 #include <util/expr.h>
-#include <util/message/message.h>
+
 #include <vector>
 #include <istream>
 
@@ -26,7 +26,7 @@ public:
     char_buffer.clear();
   }
 
-  explicit parsert(const messaget &msg) : msg(msg)
+  explicit parsert()
   {
     clear();
   }
@@ -87,7 +87,6 @@ public:
   }
 
 private:
-  const messaget &msg;
   virtual bool read2(char &ch)
   {
     if(!char_buffer.empty())

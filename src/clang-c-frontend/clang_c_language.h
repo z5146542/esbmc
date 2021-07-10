@@ -28,9 +28,9 @@ public:
     std::ostream &outstream,
     const messaget &msg);
 
-  bool parse(const std::string &path, const messaget &msg) override;
+  bool parse(const std::string &path) override;
 
-  bool final(contextt &context, const messaget &msg) override;
+  bool final(contextt &context) override;
 
   bool typecheck(
     contextt &context,

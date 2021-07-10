@@ -28,8 +28,7 @@ class symex_target_equationt : public symex_targett
 public:
   class SSA_stept;
 
-  symex_target_equationt(const namespacet &_ns, const messaget &msg)
-    : ns(_ns), msg(msg)
+  symex_target_equationt(const namespacet &_ns) : ns(_ns), msg(msg)
   {
     debug_print = config.options.get_bool_option("symex-ssa-trace");
     ssa_trace = config.options.get_bool_option("ssa-trace");
@@ -154,8 +153,7 @@ public:
     {
     }
 
-    void
-    output(const namespacet &ns, std::ostream &out, const messaget &msg) const;
+    void output(const namespacet &ns, std::ostream &out) const;
     void short_output(
       const namespacet &ns,
       std::ostream &out,

@@ -54,7 +54,6 @@ extern "C"
 #include <pointer-analysis/value_set_analysis.h>
 #include <util/symbol.h>
 #include <util/time_stopping.h>
-#include <util/message/format.h>
 
 #ifndef _WIN32
 #include <sys/wait.h>
@@ -63,8 +62,6 @@ extern "C"
 #ifdef ENABLE_OLD_FRONTEND
 #include <ansi-c/c_preprocess.h>
 #endif
-
-#include <util/message/default_message.h>
 
 enum PROCESS_TYPE
 {
@@ -84,7 +81,7 @@ struct resultt
 void timeout_handler(int)
 {
   default_message msg;
-  msg.error("Timed out");
+  log_error("Timed out");
   // Unfortunately some highly useful pieces of code hook themselves into
   // aexit and attempt to free some memory. That doesn't really make sense to
   // occur on exit, but more importantly doesn't mix well with signal handlers,
@@ -132,7 +129,7 @@ uint64_t esbmc_parseoptionst::read_time_spec(const char *str)
       mult = 86400;
       break;
     default:
-      msg.error("Unrecognized timeout suffix");
+      log_error("Unrecognized timeout suffix");
       abort();
     }
   }
@@ -167,7 +164,7 @@ uint64_t esbmc_parseoptionst::read_mem_spec(const char *str)
       mult = 1024 * 1024 * 1024;
       break;
     default:
-      msg.error("Unrecognized memlimit suffix");
+      log_error("Unrecognized memlimit suffix");
       abort();
     }
   }
@@ -258,7 +255,7 @@ void esbmc_parseoptionst::get_command_line_options(optionst &options)
   {
     if(!cmdline.isset("smt-during-symex"))
     {
-      msg.error(
+      log_error(
         "Please explicitly specify --smt-during-symex if you want "
         "to use features that involve encoding SMT during symex");
       abort();
@@ -277,7 +274,7 @@ void esbmc_parseoptionst::get_command_line_options(optionst &options)
     // check whether k-step is greater than max-k-step
     if(k_step_inc >= max_k_step)
     {
-      msg.error(
+      log_error(
         "Please specify --k-step smaller than max-k-step if you want "
         "to use incremental verification.");
       abort();
@@ -314,7 +311,7 @@ void esbmc_parseoptionst::get_command_line_options(optionst &options)
   if(cmdline.isset("timeout"))
   {
 #ifdef _WIN32
-    msg.error("Timeout unimplemented on Windows, sorry");
+    log_error("Timeout unimplemented on Windows, sorry");
     abort();
 #else
     const char *time = cmdline.getval("timeout");
@@ -327,7 +324,7 @@ void esbmc_parseoptionst::get_command_line_options(optionst &options)
   if(cmdline.isset("memlimit"))
   {
 #ifdef _WIN32
-    msg.error("Can't memlimit on Windows, sorry");
+    log_error("Can't memlimit on Windows, sorry");
     abort();
 #else
     uint64_t size = read_mem_spec(cmdline.getval("memlimit"));
@@ -392,7 +389,7 @@ int esbmc_parseoptionst::doit()
   if(cmdline.isset("module") || cmdline.isset("gen-interface"))
 
   {
-    msg.error(
+    log_error(
       "This version has no support for "
       " hardware modules.");
     return 1;
@@ -451,7 +448,7 @@ int esbmc_parseoptionst::doit()
 int esbmc_parseoptionst::doit_k_induction_parallel()
 {
 #ifdef _WIN32
-  msg.error("Windows does not support parallel kind");
+  log_error("Windows does not support parallel kind");
   abort();
 #else
   // Pipes for communication between processes
@@ -504,7 +501,7 @@ int esbmc_parseoptionst::doit_k_induction_parallel()
 
   if(process_type == PARENT && num_p != 3)
   {
-    msg.error("Child processes were not created sucessfully.");
+    log_error("Child processes were not created sucessfully.");
     abort();
   }
 
@@ -567,8 +564,8 @@ int esbmc_parseoptionst::doit_k_induction_parallel()
         else
         {
           // Invalid size read.
-          msg.error("Short read communicating with kinduction children");
-          msg.error(fmt::format("Size {}, expected {}", read, sizeof(resultt)));
+          log_error("Short read communicating with kinduction children");
+          log_error(fmt::format("Size {}, expected {}", read, sizeof(resultt)));
           abort();
         }
       }
@@ -653,7 +650,7 @@ int esbmc_parseoptionst::doit_k_induction_parallel()
         break;
 
       default:
-        msg.error(
+        log_error(
           "Message from unrecognized k-induction child "
           "process");
         abort();
@@ -833,8 +830,8 @@ int esbmc_parseoptionst::doit_k_induction_parallel()
         else
         {
           // Invalid size read.
-          msg.error("Short read communicating with kinduction parent");
-          msg.error(
+          log_error("Short read communicating with kinduction parent");
+          log_error(
             fmt::format("Size {}, expected {}", read_size, sizeof(resultt)));
 
           abort();
@@ -1328,13 +1325,13 @@ bool esbmc_parseoptionst::set_claims(goto_functionst &goto_functions)
 
   catch(const char *e)
   {
-    msg.error(e);
+    log_error(e);
     return true;
   }
 
   catch(const std::string &e)
   {
-    msg.error(e);
+    log_error(e);
     return true;
   }
 
@@ -1355,7 +1352,7 @@ bool esbmc_parseoptionst::get_goto_program(
   {
     if(cmdline.args.size() == 0)
     {
-      msg.error("Please provide a program to verify");
+      log_error("Please provide a program to verify");
       return true;
     }
 
@@ -1428,19 +1425,19 @@ bool esbmc_parseoptionst::get_goto_program(
 
   catch(const char *e)
   {
-    msg.error(e);
+    log_error(e);
     return true;
   }
 
   catch(const std::string &e)
   {
-    msg.error(e);
+    log_error(e);
     return true;
   }
 
   catch(std::bad_alloc &)
   {
-    msg.error("Out of memory");
+    log_error("Out of memory");
     return true;
   }
 
@@ -1453,7 +1450,7 @@ void esbmc_parseoptionst::preprocessing()
   {
     if(cmdline.args.size() != 1)
     {
-      msg.error("Please provide one program to preprocess");
+      log_error("Please provide one program to preprocess");
       return;
     }
 
@@ -1463,7 +1460,7 @@ void esbmc_parseoptionst::preprocessing()
     std::ifstream infile(filename.c_str());
     if(!infile)
     {
-      msg.error("failed to open input file");
+      log_error("failed to open input file");
       return;
     }
 #ifdef ENABLE_OLD_FRONTEND
@@ -1475,17 +1472,17 @@ void esbmc_parseoptionst::preprocessing()
   }
   catch(const char *e)
   {
-    msg.error(e);
+    log_error(e);
   }
 
   catch(const std::string &e)
   {
-    msg.error(e);
+    log_error(e);
   }
 
   catch(std::bad_alloc &)
   {
-    msg.error("Out of memory");
+    log_error("Out of memory");
   }
 }
 
@@ -1495,7 +1492,7 @@ bool esbmc_parseoptionst::read_goto_binary(goto_functionst &goto_functions)
 
   if(!in)
   {
-    msg.error(std::string("Failed to open `") + cmdline.getval("binary") + "'");
+    log_error(std::string("Failed to open `") + cmdline.getval("binary") + "'");
     return true;
   }
 
@@ -1612,19 +1609,19 @@ bool esbmc_parseoptionst::process_goto_program(
 
   catch(const char *e)
   {
-    msg.error(e);
+    log_error(e);
     return true;
   }
 
   catch(const std::string &e)
   {
-    msg.error(e);
+    log_error(e);
     return true;
   }
 
   catch(std::bad_alloc &)
   {
-    msg.error("Out of memory");
+    log_error("Out of memory");
     return true;
   }
 

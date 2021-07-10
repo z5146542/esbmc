@@ -6,8 +6,8 @@ Author: Daniel Kroening, kroening@kroening.com
 
 \*******************************************************************/
 
+#include <util/message.h>
 #include <util/typecheck.h>
-#include <util/message/format.h>
 
 bool typecheckt::typecheck_main()
 {
@@ -16,20 +16,17 @@ bool typecheckt::typecheck_main()
     typecheck();
   }
 
-  catch(int e)
-  {
-    error(fmt::format("{}", e));
-  }
-
   catch(const char *e)
   {
-    error(e);
+    log_error(e);
+    return true;
   }
 
   catch(const std::string &e)
   {
-    error(e);
+    log_error(e);
+    return true;
   }
 
-  return error_found;
+  return false;
 }

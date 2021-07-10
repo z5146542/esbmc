@@ -86,7 +86,7 @@ smt_astt smt_tuple_sym_flattener::tuple_array_create(
   }
   if(!is_constant_int2t(arr_type.array_size))
   {
-    msg.error("Non-constant sized array of type constant_array_of2t");
+    log_error("Non-constant sized array of type constant_array_of2t");
     abort();
   }
 

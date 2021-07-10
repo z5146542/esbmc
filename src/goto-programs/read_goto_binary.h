@@ -11,13 +11,12 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <goto-programs/goto_functions.h>
 #include <util/context.h>
-#include <util/message/message.h>
+
 #include <util/options.h>
 
 void read_goto_binary(
   std::istream &in,
   contextt &context,
-  goto_functionst &dest,
-  const messaget &message_handler);
+  goto_functionst &dest);
 
 #endif

@@ -10,9 +10,9 @@
 #include <util/c_types.h>
 #include <util/expr.h>
 #include <util/irep2_utils.h>
+#include <util/message.h>
 #include <util/std_types.h>
 #include <util/type_byte_size.h>
-#include <util/message/format.h>
 
 BigInt member_offset(const type2tc &type, const irep_idt &member)
 {
@@ -72,14 +72,14 @@ BigInt type_byte_size_bits(const type2tc &type)
     return 0;
 
   case type2t::symbol_id:
-    assert(
-      0 &&
-      fmt::format("Symbolic type id in type_byte_size\n{}", *type).c_str());
+    log_error("Symbolic type id in type_byte_size");
+    type->dump();
+    abort();
 
   case type2t::cpp_name_id:
-    assert(
-      0 &&
-      fmt::format("C++ symbolic type id in type_byte_size\n{}", *type).c_str());
+    log_error("C++ symbolic type id in type_byte_size");
+    type->dump();
+    abort();
 
   case type2t::bool_id:
   case type2t::unsignedbv_id:
@@ -139,9 +139,8 @@ BigInt type_byte_size_bits(const type2tc &type)
   }
 
   default:
-    assert(
-      0 && fmt::format("Unrecognised type in type_byte_size_bits:\n{}", *type)
-             .c_str());
+    log_error("Unrecognised type in type_byte_size_bits:\n{}");
+    type->dump();
     abort();
   }
 }
@@ -248,8 +247,9 @@ expr2tc compute_pointer_offset(const expr2tc &expr)
     return gen_ulong(0);
   }
 
-  throw std::runtime_error(fmt::format(
-    "compute_pointer_offset, unexpected irep:\n{}", expr->pretty()));
+  log_error("compute_pointer_offset, unexpected irep");
+  expr->dump();
+  abort();
 }
 
 const expr2tc &get_base_object(const expr2tc &expr)

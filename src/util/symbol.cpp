@@ -7,8 +7,8 @@ Author: Daniel Kroening, kroening@kroening.com
 \*******************************************************************/
 
 #include <util/location.h>
+#include <util/message.h>
 #include <util/symbol.h>
-#include <util/message/default_message.h>
 
 symbolt::symbolt()
 {
@@ -49,14 +49,7 @@ void symbolt::swap(symbolt &b)
 
 void symbolt::dump() const
 {
-  default_message msg;
-  std::ostringstream oss;
-  show(oss);
-  msg.debug(oss.str());
-}
-
-void symbolt::show(std::ostream &out) const
-{
+  std::ostringstream out;
   out << "Symbol......: " << id << "\n";
   out << "Base name...: " << name << "\n";
   out << "Module......: " << module << "\n";
@@ -86,12 +79,7 @@ void symbolt::show(std::ostream &out) const
   out << "Location....: " << location << "\n";
 
   out << "\n";
-}
-
-std::ostream &operator<<(std::ostream &out, const symbolt &symbol)
-{
-  symbol.show(out);
-  return out;
+  log_debug(out.str());
 }
 
 void symbolt::to_irep(irept &dest) const

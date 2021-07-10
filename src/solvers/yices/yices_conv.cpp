@@ -4,7 +4,7 @@
 #include <sstream>
 #include <yices_conv.h>
 #include <assert.h>
-#include <util/message/default_message.h>
+
 // From yices 2.3 (I think) various API calls have had new non-binary
 // operand versions added. The maintainers have chosen to break backwards
 // compatibility in the process by moving the old functions to new names, and
@@ -24,21 +24,17 @@ smt_convt *create_new_yices_solver(
   const namespacet &ns,
   tuple_iface **tuple_api,
   array_iface **array_api,
-  fp_convt **fp_api,
-  const messaget &msg)
+  fp_convt **fp_api)
 {
-  yices_convt *conv = new yices_convt(ns, options, msg);
+  yices_convt *conv = new yices_convt(ns, options);
   *array_api = static_cast<array_iface *>(conv);
   *fp_api = static_cast<fp_convt *>(conv);
   *tuple_api = static_cast<tuple_iface *>(conv);
   return conv;
 }
 
-yices_convt::yices_convt(
-  const namespacet &ns,
-  const optionst &options,
-  const messaget &msg)
-  : smt_convt(ns, options, msg), array_iface(false, false), fp_convt(this, msg)
+yices_convt::yices_convt(const namespacet &ns, const optionst &options)
+  : smt_convt(ns, options), array_iface(false, false), fp_convt(this)
 {
   yices_init();
 
@@ -71,7 +67,7 @@ void yices_convt::push_ctx()
     FILE *f = msg.get_temp_file();
     yices_print_error(f);
     msg.insert_and_close_file_contents(VerbosityLevel::Error, f);
-    msg.error("Error pushing yices context");
+    log_error("Error pushing yices context");
     abort();
   }
 }
@@ -85,7 +81,7 @@ void yices_convt::pop_ctx()
     FILE *f = msg.get_temp_file();
     yices_print_error(f);
     msg.insert_and_close_file_contents(VerbosityLevel::Error, f);
-    msg.error("Error poping yices context");
+    log_error("Error poping yices context");
     abort();
   }
 
@@ -666,7 +662,7 @@ smt_astt yices_convt::mk_select(smt_astt a, smt_astt b)
 
 smt_astt yices_convt::mk_isint(smt_astt)
 {
-  msg.error(
+  log_error(
     "Yices does not support an is-integer operation on reals, "
     "therefore certain casts and operations don't work, sorry");
   abort();
@@ -794,7 +790,7 @@ bool yices_convt::get_bool(smt_astt a)
   const yices_smt_ast *ast = to_solver_smt_ast<yices_smt_ast>(a);
   if(yices_get_bool_value(yices_get_model(yices_ctx, 1), ast->a, &val))
   {
-    msg.error("Can't get boolean value from Yices");
+    log_error("Can't get boolean value from Yices");
     abort();
   }
 

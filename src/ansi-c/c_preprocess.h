@@ -11,12 +11,10 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <iostream>
 #include <string>
-#include <util/message/message.h>
 
 bool c_preprocess(
   const std::string &path,
   std::ostream &outstream,
-  bool is_cpp,
-  message_handlert &message_handler);
+  bool is_cpp);
 
 #endif

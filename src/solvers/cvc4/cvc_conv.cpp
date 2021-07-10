@@ -1,6 +1,5 @@
 #include <util/c_types.h>
 #include <cvc_conv.h>
-#include <util/message/default_message.h>
 
 #define new_ast new_solver_ast<cvc_smt_ast>
 
@@ -9,8 +8,7 @@ smt_convt *create_new_cvc_solver(
   const namespacet &ns,
   tuple_iface **tuple_api [[gnu::unused]],
   array_iface **array_api,
-  fp_convt **fp_api,
-  const messaget &msg)
+  fp_convt **fp_api)
 {
   cvc_convt *conv = new cvc_convt(ns, options, msg);
   *array_api = static_cast<array_iface *>(conv);
@@ -18,10 +16,7 @@ smt_convt *create_new_cvc_solver(
   return conv;
 }
 
-cvc_convt::cvc_convt(
-  const namespacet &ns,
-  const optionst &options,
-  const messaget &msg)
+cvc_convt::cvc_convt(const namespacet &ns, const optionst &options)
   : smt_convt(ns, options, msg),
     array_iface(false, false),
     fp_convt(this, msg),
@@ -1278,7 +1273,7 @@ void cvc_convt::dump_smt()
   auto const &assertions = smt.getAssertions();
   for(auto const &a : assertions)
     a.printAst(oss, 0);
-  msg.debug(oss.str());
+  log_debug(oss.str());
 }
 
 void cvc_smt_ast::dump() const
@@ -1286,5 +1281,5 @@ void cvc_smt_ast::dump() const
   default_message msg;
   std::ostringstream oss;
   a.printAst(oss, 0);
-  msg.debug(oss.str());
+  log_debug(oss.str());
 }

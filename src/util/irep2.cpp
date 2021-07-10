@@ -7,10 +7,9 @@
 #include <util/irep2_type.h>
 #include <util/irep2_expr.h>
 #include <util/irep2_utils.h>
+#include <util/message.h>
 #include <util/migrate.h>
 #include <util/std_types.h>
-#include <util/message/format.h>
-#include <util/message/default_message.h>
 
 template <typename T>
 class register_irep_methods;
@@ -124,8 +123,7 @@ std::string type2t::pretty(unsigned int indent) const
 
 void type2t::dump() const
 {
-  default_message msg;
-  msg.debug(pretty(0));
+  log_debug(pretty(0));
 }
 
 size_t type2t::crc() const
@@ -282,25 +280,19 @@ unsigned int struct_union_data::get_component_number(const irep_idt &comp) const
 
   if(!count)
   {
-    assert(
-      0 &&
-      fmt::format(
-        "Looking up index of nonexistant member \"{}\" in struct/union \"{}\"",
-        comp,
-        name)
-        .c_str());
-  }
-  else if(count > 1)
-  {
-    assert(
-      0 &&
-      fmt::format(
-        "Name \"{}\" matches more than one member\" in struct/union \"{}\"",
-        comp,
-        name)
-        .c_str());
+    log_error(
+      "Looking up index of nonexistant member",
+      comp.as_string(),
+      "in struct/union",
+      name.as_string());
+    abort();
   }
 
+  log_error(
+    "Name",
+    comp.as_string(),
+    "matches more than one member in struct/union",
+    name.as_string());
   abort();
 }
 
@@ -562,8 +554,7 @@ std::string expr2t::pretty(unsigned int indent) const
 
 void expr2t::dump() const
 {
-  default_message msg;
-  msg.debug((0));
+  log_debug(pretty(0));
 }
 
 // Map a base type to it's list of names

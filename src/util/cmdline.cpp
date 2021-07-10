@@ -8,10 +8,9 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <cassert>
 #include <cstdlib>
-
 #include <util/cmdline.h>
+#include <util/message.h>
 #include <sstream>
-#include <util/message/format.h>
 
 std::string verification_file;
 
@@ -112,7 +111,7 @@ bool cmdlinet::parse(
   }
   catch(std::exception &e)
   {
-    msg.error(fmt::format("ESBMC error: {}", e.what()));
+    log_error("ESBMC error:", e.what());
     return true;
   }
 

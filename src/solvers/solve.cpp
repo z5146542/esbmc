@@ -62,8 +62,7 @@ static smt_convt *create_solver(
   const namespacet &ns,
   tuple_iface **tuple_api,
   array_iface **array_api,
-  fp_convt **fp_api,
-  const messaget &msg [[gnu::unused]])
+  fp_convt **fp_api [[gnu::unused]])
 {
   for(const auto &esbmc_solver : esbmc_solvers)
   {
@@ -74,7 +73,7 @@ static smt_convt *create_solver(
     }
   }
 
-  msg.error(fmt::format(
+  log_error(fmt::format(
     "The {} solver has not been built into this version of ESBMC, sorry",
     the_solver));
   abort();
@@ -89,7 +88,7 @@ static const std::string pick_default_solver(const messaget &msg)
   // Pick whatever's first in the list.
   if(esbmc_num_solvers == 1)
   {
-    msg.error(
+    log_error(
       "No solver backends built into ESBMC; please either build "
       "some in, or explicitly configure the smtlib backend");
     abort();
@@ -108,8 +107,7 @@ static smt_convt *pick_solver(
   const optionst &options,
   tuple_iface **tuple_api,
   array_iface **array_api,
-  fp_convt **fp_api,
-  const messaget &msg)
+  fp_convt **fp_api)
 {
   unsigned int i;
   std::string the_solver;
@@ -120,7 +118,7 @@ static smt_convt *pick_solver(
     {
       if(the_solver != "")
       {
-        msg.error("Please only specify one solver");
+        log_error("Please only specify one solver");
         abort();
       }
 
@@ -141,8 +139,7 @@ smt_convt *create_solver_factory1(
   const optionst &options,
   tuple_iface **tuple_api,
   array_iface **array_api,
-  fp_convt **fp_api,
-  const messaget &msg)
+  fp_convt **fp_api)
 {
   if(solver_name == "")
     // Pick one based on options.
@@ -155,8 +152,7 @@ smt_convt *create_solver_factory1(
 smt_convt *create_solver_factory(
   const std::string &solver_name,
   const namespacet &ns,
-  const optionst &options,
-  const messaget &msg)
+  const optionst &options)
 {
   tuple_iface *tuple_api = nullptr;
   array_iface *array_api = nullptr;

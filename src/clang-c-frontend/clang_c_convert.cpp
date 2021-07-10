@@ -20,20 +20,18 @@
 #include <util/c_types.h>
 #include <util/expr_util.h>
 #include <util/i2string.h>
+#include <util/message.h>
 #include <util/mp_arith.h>
 #include <util/std_code.h>
 #include <util/std_expr.h>
-#include <util/message/format.h>
 
 clang_c_convertert::clang_c_convertert(
   contextt &_context,
-  std::vector<std::unique_ptr<clang::ASTUnit>> &_ASTs,
-  const messaget &msg)
+  std::vector<std::unique_ptr<clang::ASTUnit>> &_ASTs)
   : ASTContext(nullptr),
     context(_context),
     ns(context),
     ASTs(_ASTs),
-    msg(msg),
     current_scope_var_num(1),
     sm(nullptr),
     current_functionDecl(nullptr)
@@ -251,7 +249,7 @@ bool clang_c_convertert::get_decl(const clang::Decl &decl, exprt &new_expr)
     ross << "Unrecognized / unimplemented clang declaration "
          << decl.getDeclKindName() << "\n";
     decl.dump(ross);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
 
@@ -262,7 +260,7 @@ bool clang_c_convertert::get_struct_union_class(const clang::RecordDecl &rd)
 {
   if(rd.isInterface())
   {
-    msg.error("Interface is not supported");
+    log_error("Interface is not supported");
     return true;
   }
 
@@ -384,11 +382,11 @@ bool clang_c_convertert::get_struct_union_class_fields(
           else
           {
             // I was not able to find an example to test this, so abort for now
-            msg.error("ESBMC currently does not support type alignments");
+            log_error("ESBMC currently does not support type alignments");
             std::ostringstream oss;
             llvm::raw_os_ostream ross(oss);
             aattr.getAlignmentType()->getType()->dump(ross, *ASTContext);
-            msg.error(oss.str());
+            log_error(oss.str());
             return true;
           }
         }
@@ -739,7 +737,7 @@ bool clang_c_convertert::get_type(const clang::Type &the_type, typet &new_type)
     llvm::APInt val = arr.getSize();
     if(val.getBitWidth() > 64)
     {
-      msg.error(
+      log_error(
         "ESBMC currently does not support integers bigger "
         "than 64 bits");
       return true;
@@ -1014,7 +1012,7 @@ bool clang_c_convertert::get_type(const clang::Type &the_type, typet &new_type)
     ross << "Conversion of unsupported clang type: \"";
     ross << the_type.getTypeClassName() << "\n";
     the_type.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
 
@@ -1136,13 +1134,13 @@ bool clang_c_convertert::get_builtin_type(
   case clang::BuiltinType::UInt128:
     // Various simplification / big-int related things use uint64_t's...
     {
-      msg.error(
+      log_error(
         "ESBMC currently does not support integers bigger "
         "than 64 bits");
       std::ostringstream oss;
       llvm::raw_os_ostream ross(oss);
       bt.dump(ross, *ASTContext);
-      msg.error(oss.str());
+      log_error(oss.str());
       return true;
     }
   default:
@@ -1154,7 +1152,7 @@ bool clang_c_convertert::get_builtin_type(
          << bt.getName(clang::PrintingPolicy(clang::LangOptions())).str()
          << "\n";
     bt.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
   }
@@ -1322,11 +1320,11 @@ bool clang_c_convertert::get_expr(const clang::Stmt &stmt, exprt &new_expr)
     bool res = offset.EvaluateAsInt(result, *ASTContext);
     if(!res)
     {
-      msg.error("Clang could not calculate offset");
+      log_error("Clang could not calculate offset");
       std::ostringstream oss;
       llvm::raw_os_ostream ross(oss);
       offset.dump(ross, *ASTContext);
-      msg.error(oss.str());
+      log_error(oss.str());
       return true;
     }
 
@@ -2003,11 +2001,11 @@ bool clang_c_convertert::get_expr(const clang::Stmt &stmt, exprt &new_expr)
     }
     else
     {
-      msg.error("ESBMC currently does not support indirect gotos");
+      log_error("ESBMC currently does not support indirect gotos");
       std::ostringstream oss;
       llvm::raw_os_ostream ross(oss);
       stmt.dump(ross, *ASTContext);
-      msg.error(oss.str());
+      log_error(oss.str());
       return true;
 
       exprt target;
@@ -2046,7 +2044,7 @@ bool clang_c_convertert::get_expr(const clang::Stmt &stmt, exprt &new_expr)
            << "the following return statement:"
            << "\n";
       ret.dump(ross, *ASTContext);
-      msg.error(oss.str());
+      log_error(oss.str());
       return true;
     }
 
@@ -2100,7 +2098,7 @@ bool clang_c_convertert::get_expr(const clang::Stmt &stmt, exprt &new_expr)
     ross << stmt.getStmtClassName() << "\" to expression"
          << "\n";
     stmt.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
   }
@@ -2147,7 +2145,7 @@ bool clang_c_convertert::get_decl_ref(const clang::Decl &d, exprt &new_expr)
   ross << d.getDeclKindName() << "\" to expression"
        << "\n";
   d.dump(ross);
-  msg.error(oss.str());
+  log_error(oss.str());
   return true;
 }
 
@@ -2215,7 +2213,7 @@ bool clang_c_convertert::get_cast_expr(
     ross << cast.getCastKindName() << "\" to expression"
          << "\n";
     cast.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
   }
@@ -2291,7 +2289,7 @@ bool clang_c_convertert::get_unary_operator_expr(
          << "\" to expression"
          << "\n";
     uniop.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
   }
@@ -2480,7 +2478,7 @@ bool clang_c_convertert::get_compound_assign_expr(
     ross << compop.getOpcodeStr().str() << "\" to expression"
          << "\n";
     compop.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
   }
@@ -2641,11 +2639,11 @@ bool clang_c_convertert::get_atomic_expr(
     break;
 
   default:
-    msg.error("Unknown Atomic expression");
+    log_error("Unknown Atomic expression");
     std::ostringstream oss;
     llvm::raw_os_ostream ross(oss);
     atm.dump(ross, *ASTContext);
-    msg.error(oss.str());
+    log_error(oss.str());
     return true;
   }
 
@@ -2822,7 +2820,7 @@ void clang_c_convertert::get_decl_name(
       std::ostringstream oss;
       llvm::raw_os_ostream ross(oss);
       nd.dump(ross);
-      msg.error(fmt::format("Declaration has an empty name:\n{}", oss.str()));
+      log_error(fmt::format("Declaration has an empty name:\n{}", oss.str()));
       abort();
     }
   }
@@ -2839,7 +2837,7 @@ void clang_c_convertert::get_decl_name(
   llvm::raw_os_ostream ross(oss);
   ross << "Unable to generate the USR for:\n";
   nd.dump(ross);
-  msg.error(oss.str());
+  log_error(oss.str());
   abort();
 }
 
@@ -2953,7 +2951,7 @@ symbolt *clang_c_convertert::move_symbol_to_context(symbolt &symbol)
   {
     if(context.move(symbol, s))
     {
-      msg.error(fmt::format(
+      log_error(fmt::format(
         "Couldn't add symbol {} to symbol table\n{}", symbol.name, symbol));
       abort();
     }

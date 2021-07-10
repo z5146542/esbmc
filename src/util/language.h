@@ -12,7 +12,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <cstdio>
 #include <set>
 #include <util/context.h>
-#include <util/message/message.h>
+
 #include <util/namespace.h>
 
 class languaget
@@ -20,7 +20,7 @@ class languaget
 public:
   // parse file
 
-  virtual bool parse(const std::string &path, const messaget &msg) = 0;
+  virtual bool parse(const std::string &path) = 0;
 
   // add external dependencies of a given module to set
 
@@ -35,7 +35,7 @@ public:
   }
 
   // final adjustments, e.g., initialization and call to main()
-  virtual bool final(contextt &, const messaget &)
+  virtual bool final(contextt &)
   {
     return false;
   }
@@ -47,10 +47,7 @@ public:
   }
 
   // type check a module in the currently parsed file
-  virtual bool typecheck(
-    contextt &context,
-    const std::string &module,
-    const messaget &msg) = 0;
+  virtual bool typecheck(contextt &context, const std::string &module) = 0;
 
   // language id / description
   virtual std::string id() const
@@ -73,16 +70,11 @@ public:
   virtual bool
   from_type(const typet &type, std::string &code, const namespacet &ns) = 0;
 
-  virtual languaget *new_language(const messaget &msg) = 0;
+  virtual languaget *new_language() = 0;
 
   // constructor / destructor
 
-  explicit languaget(const messaget &msg) : msg(msg)
-  {
-  }
+  explicit languaget() = default;
   virtual ~languaget() = default;
-
-protected:
-  const messaget &msg;
 };
 #endif

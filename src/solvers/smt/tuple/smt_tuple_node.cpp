@@ -108,7 +108,7 @@ smt_astt smt_tuple_node_flattener::tuple_array_create(
   }
   if(!is_constant_int2t(arr_type.array_size))
   {
-    msg.error("Non-constant sized array of type constant_array_of2t");
+    log_error("Non-constant sized array of type constant_array_of2t");
     abort();
   }
 
@@ -178,7 +178,7 @@ expr2tc smt_tuple_node_flattener::tuple_get_rec(tuple_node_smt_astt tuple)
     {
       if(is_fetching_from_array_an_error)
       {
-        msg.error(
+        log_error(
           "Fetching array elements inside tuples currently unimplemented, "
           "sorry");
         abort();
@@ -190,7 +190,7 @@ expr2tc smt_tuple_node_flattener::tuple_get_rec(tuple_node_smt_astt tuple)
     }
     else
     {
-      msg.error("Unexpected type in tuple_get_rec");
+      log_error("Unexpected type in tuple_get_rec");
       abort();
     }
 

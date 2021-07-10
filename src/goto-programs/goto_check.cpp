@@ -19,10 +19,9 @@
 class goto_checkt
 {
 public:
-  goto_checkt(const namespacet &_ns, optionst &_options, const messaget &msg)
+  goto_checkt(const namespacet &_ns, optionst &_options)
     : ns(_ns),
       options(_options),
-      new_code(msg),
       disable_bounds_check(options.get_bool_option("no-bounds-check")),
       disable_pointer_check(options.get_bool_option("no-pointer-check")),
       disable_div_by_zero_check(
@@ -601,17 +600,16 @@ void goto_check(
   optionst &options,
   goto_programt &goto_program)
 {
-  goto_checkt goto_check(ns, options, goto_program.msg);
+  goto_checkt goto_check(ns, options);
   goto_check.goto_check(goto_program);
 }
 
 void goto_check(
   const namespacet &ns,
   optionst &options,
-  goto_functionst &goto_functions,
-  const messaget &msg)
+  goto_functionst &goto_functions)
 {
-  goto_checkt goto_check(ns, options, msg);
+  goto_checkt goto_check(ns, options);
 
   for(auto &it : goto_functions.function_map)
   {

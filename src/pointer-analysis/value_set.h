@@ -58,10 +58,9 @@ class value_sett
 {
 public:
   /** Primary constructor. Does approximately nothing non-standard. */
-  value_sett(const namespacet &_ns, const messaget &msg)
+  value_sett(const namespacet &_ns)
     : location_number(0),
       ns(_ns),
-      msg(msg),
       xchg_name("value_sett::__ESBMC_xchg_ptr"),
       xchg_num(0)
   {
@@ -71,7 +70,6 @@ public:
     : location_number(ref.location_number),
       values(ref.values),
       ns(ref.ns),
-      msg(ref.msg),
       xchg_name("value_sett::__ESBMC_xchg_ptr"),
       xchg_num(0)
   {
@@ -665,7 +663,6 @@ public:
 
   /** Namespace for looking up types against. */
   const namespacet &ns;
-  const messaget &msg;
 
   irep_idt xchg_name;
   unsigned long xchg_num;

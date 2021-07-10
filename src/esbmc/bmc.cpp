@@ -37,8 +37,7 @@ Authors: Daniel Kroening, kroening@kroening.com
 #include <util/i2string.h>
 #include <util/irep2.h>
 #include <util/location.h>
-#include <util/message/message_stream.h>
-#include <util/message/format.h>
+
 #include <util/migrate.h>
 #include <util/show_symbol_table.h>
 #include <util/time_stopping.h>
@@ -338,7 +337,7 @@ void bmct::report_result(smt_convt::resultt &res)
     return;
 
   default:
-    msg.error("SMT solver failed");
+    log_error("SMT solver failed");
     break;
   }
 
@@ -563,19 +562,19 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
 
   catch(std::string &error_str)
   {
-    msg.error(error_str);
+    log_error(error_str);
     return smt_convt::P_ERROR;
   }
 
   catch(const char *error_str)
   {
-    msg.error(error_str);
+    log_error(error_str);
     return smt_convt::P_ERROR;
   }
 
   catch(std::bad_alloc &)
   {
-    msg.error("Out of memory\n");
+    log_error("Out of memory\n");
     return smt_convt::P_ERROR;
   }
 
@@ -668,19 +667,19 @@ smt_convt::resultt bmct::run_thread(std::shared_ptr<symex_target_equationt> &eq)
 
   catch(std::string &error_str)
   {
-    msg.error(error_str);
+    log_error(error_str);
     return smt_convt::P_ERROR;
   }
 
   catch(const char *error_str)
   {
-    msg.error(error_str);
+    log_error(error_str);
     return smt_convt::P_ERROR;
   }
 
   catch(std::bad_alloc &)
   {
-    msg.error("Out of memory\n");
+    log_error("Out of memory\n");
     return smt_convt::P_ERROR;
   }
 }

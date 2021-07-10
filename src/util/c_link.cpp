@@ -13,18 +13,15 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/fix_symbol.h>
 #include <util/i2string.h>
 #include <util/location.h>
+#include <util/message.h>
 #include <util/namespace.h>
 #include <util/typecheck.h>
 
 class c_linkt : public typecheckt
 {
 public:
-  c_linkt(
-    contextt &_context,
-    contextt &_new_context,
-    std::string _module,
-    const messaget &_message_handler)
-    : typecheckt(_message_handler),
+  c_linkt(contextt &_context, contextt &_new_context, std::string _module)
+    : typecheckt(),
       context(_context),
       new_context(_new_context),
       module(std::move(_module)),
@@ -46,8 +43,8 @@ protected:
   void move(symbolt &new_symbol);
 
   // overload to use language specific syntax
-  std::string to_string(const exprt &expr) override;
-  std::string to_string(const typet &type) override;
+  std::string to_string(const exprt &expr);
+  std::string to_string(const typet &type);
 
   contextt &context;
   contextt &new_context;
@@ -76,8 +73,8 @@ void c_linkt::duplicate(symbolt &in_context, symbolt &new_symbol)
 {
   if(new_symbol.is_type != in_context.is_type)
   {
-    str << "class conflict on symbol `" << in_context.name << "'";
-    throw 0;
+    log_error("class conflict on symbol", in_context.name.as_string(), "'");
+    abort();
   }
 
   if(new_symbol.is_type)
@@ -148,15 +145,13 @@ void c_linkt::duplicate_symbol(symbolt &in_context, symbolt &new_symbol)
 
   if(is_code_in_context != is_code_new_symbol)
   {
-    err_location(new_symbol.location);
-    str << "error: conflicting definition for symbol \"" << in_context.name
-        << "\""
-        << "\n";
-    str << "old definition: " << to_string(in_context.type) << "\n";
-    str << "Module: " << in_context.module << "\n";
-    str << "new definition: " << to_string(new_symbol.type) << "\n";
-    str << "Module: " << new_symbol.module;
-    throw 0;
+    log_error("Conflicting definition for symbol", in_context.name.as_string());
+    log_error("Old definition:", to_string(in_context.type));
+    log_error("module:", in_context.module.as_string());
+    log_error("New definition:", to_string(new_symbol.type));
+    log_error("module:", new_symbol.module.as_string());
+    log_error(new_symbol.location.as_string());
+    abort();
   }
 
   if(is_code_in_context)
@@ -182,20 +177,26 @@ void c_linkt::duplicate_symbol(symbolt &in_context, symbolt &new_symbol)
       else if(base_type_eq(in_context.type, new_symbol.type, ns))
       {
         // keep the one in in_context -- libraries come last!
-        str << "warning: function `" << in_context.name << "' in module `"
-            << new_symbol.module << "' is shadowed by a definition in module `"
-            << in_context.module << "'";
-        warning();
+        log_warning(
+          "Function",
+          in_context.name.as_string(),
+          "in module",
+          new_symbol.module.as_string(),
+          "is shadowed by a definition in module",
+          in_context.module.as_string(),
+          "'");
       }
       else
       {
-        err_location(new_symbol.value);
-        str << "error: duplicate definition of function `" << in_context.name
-            << "'"
-            << "\n";
-        str << "In module `" << in_context.module << "' and module `"
-            << new_symbol.module << "'";
-        throw 0;
+        log_error(
+          "Duplicate definition of function",
+          in_context.name.as_string(),
+          "in module",
+          in_context.module.as_string(),
+          "and module",
+          new_symbol.module.as_string());
+        new_symbol.value.dump();
+        abort();
       }
     }
   }
@@ -248,15 +249,14 @@ void c_linkt::duplicate_symbol(symbolt &in_context, symbolt &new_symbol)
 #endif
       else
       {
-        err_location(new_symbol.location);
-        str << "error: conflicting definition for variable `" << in_context.name
-            << "'"
-            << "\n";
-        str << "old definition: " << to_string(in_context.type) << "\n";
-        str << "Module: " << in_context.module << "\n";
-        str << "new definition: " << to_string(new_symbol.type) << "\n";
-        str << "Module: " << new_symbol.module;
-        throw 0;
+        log_error(
+          "Conflicting definition for variable", in_context.name.as_string());
+        log_error("Old definition:", to_string(in_context.type));
+        log_error("module:", in_context.module.as_string());
+        log_error("New definition:", to_string(new_symbol.type));
+        log_error("module:", new_symbol.module.as_string());
+        log_error(new_symbol.location.as_string());
+        abort();
       }
     }
 
@@ -270,15 +270,14 @@ void c_linkt::duplicate_symbol(symbolt &in_context, symbolt &new_symbol)
       }
       else if(!base_type_eq(in_context.value, new_symbol.value, ns))
       {
-        err_location(new_symbol.value);
-        str << "error: conflicting initializers for variable `"
-            << in_context.name << "'"
-            << "\n";
-        str << "old value: " << to_string(in_context.value) << "\n";
-        str << "Module: " << in_context.module << "\n";
-        str << "new value: " << to_string(new_symbol.value) << "\n";
-        str << "Module: " << new_symbol.module;
-        throw 0;
+        log_error(
+          "Conflicting initializers for variable", in_context.name.as_string());
+        log_error("Old definition:", to_string(in_context.value));
+        log_error("module:", in_context.module.as_string());
+        log_error("New definition:", to_string(new_symbol.value));
+        log_error("module:", new_symbol.module.as_string());
+        log_error(new_symbol.location.as_string());
+        abort();
       }
     }
   }
@@ -331,12 +330,8 @@ void c_linkt::move(symbolt &new_symbol)
     duplicate(*new_symbol_ptr, new_symbol);
 }
 
-bool c_link(
-  contextt &context,
-  contextt &new_context,
-  const messaget &message_handler,
-  const std::string &module)
+bool c_link(contextt &context, contextt &new_context, const std::string &module)
 {
-  c_linkt c_link(context, new_context, module, message_handler);
+  c_linkt c_link(context, new_context, module);
   return c_link.typecheck_main();
 }

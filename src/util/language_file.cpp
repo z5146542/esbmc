@@ -9,6 +9,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <fstream>
 #include <util/language.h>
 #include <util/language_file.h>
+#include <util/message.h>
 #include <util/std_types.h>
 
 language_filet::~language_filet()
@@ -38,7 +39,7 @@ bool language_filest::parse()
 
     if(!infile)
     {
-      msg.error("Failed to open " + it.first);
+      log_error("Failed to open", it.first);
       return true;
     }
 
@@ -46,9 +47,9 @@ bool language_filest::parse()
 
     languaget &language = *(it.second.language);
 
-    if(language.parse(it.first, msg))
+    if(language.parse(it.first))
     {
-      msg.error("Parsing of " + it.first + " failed");
+      log_error("Parsing of", it.first, "failed");
       return true;
     }
 
@@ -92,7 +93,7 @@ bool language_filest::typecheck(contextt &context)
   for(auto &it : filemap)
   {
     if(it.second.modules.empty())
-      if(it.second.language->typecheck(context, "", msg))
+      if(it.second.language->typecheck(context, ""))
         return true;
   }
 
@@ -117,7 +118,7 @@ bool language_filest::final(contextt &context)
   for(auto &it : filemap)
   {
     if(languages.insert(it.second.language->id()).second)
-      if(it.second.language->final(context, msg))
+      if(it.second.language->final(context))
         return true;
   }
 #endif
@@ -148,7 +149,7 @@ bool language_filest::typecheck_module(
 
   if(it == modulemap.end())
   {
-    msg.error("found no file that provides module " + module);
+    log_error("found no file that provides module " + module);
     return true;
   }
 
@@ -168,7 +169,7 @@ bool language_filest::typecheck_module(
 
   if(module.in_progress)
   {
-    msg.error("circular dependency in " + module.name);
+    log_error("circular dependency in " + module.name);
     return true;
   }
 
@@ -191,9 +192,9 @@ bool language_filest::typecheck_module(
 
   // type check it
 
-  msg.status("Type-checking " + module.name);
+  log_status("Type-checking " + module.name);
 
-  if(module.file->language->typecheck(context, module.name, msg))
+  if(module.file->language->typecheck(context, module.name))
   {
     module.in_progress = false;
     return true;
@@ -225,11 +226,11 @@ void language_filest::typecheck_virtual_methods(contextt &context)
 
           if(member_function.value.is_nil())
           {
-            msg.error(
-              member_function.location.as_string() +
-              ": The virtual method isn't pure virtual and hasn't a "
-              "method implementation ");
-            msg.error("CONVERSION ERROR");
+            log_error(
+              member_function.location.as_string(),
+              ": The virtual method isn't pure virtual and hasn't a method "
+              "implementation ");
+            log_error("CONVERSION ERROR");
             abort();
           }
         }

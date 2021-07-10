@@ -16,14 +16,13 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/irep2.h>
 #include <util/migrate.h>
 #include <util/std_expr.h>
-#include <util/message/default_message.h>
 
 void symex_target_equationt::debug_print_step(const SSA_stept &step) const
 {
   default_message msg;
   std::ostringstream oss;
   step.output(ns, oss, msg);
-  msg.debug(oss.str());
+  log_debug(oss.str());
 }
 
 void symex_target_equationt::assignment(
@@ -262,13 +261,12 @@ void symex_target_equationt::SSA_stept::dump() const
   default_message msg;
   std::ostringstream oss;
   output(*migrate_namespace_lookup, oss, msg);
-  msg.debug(oss.str());
+  log_debug(oss.str());
 }
 
 void symex_target_equationt::SSA_stept::output(
   const namespacet &ns,
-  std::ostream &out,
-  const messaget &msg) const
+  std::ostream &out) const
 {
   if(source.is_set)
   {
@@ -318,7 +316,6 @@ void symex_target_equationt::SSA_stept::output(
 void symex_target_equationt::SSA_stept::short_output(
   const namespacet &ns,
   std::ostream &out,
-  const messaget &msg,
   bool show_ignored) const
 {
   if((is_assignment() || is_assert() || is_assume()) && show_ignored == ignore)
@@ -396,8 +393,7 @@ unsigned int symex_target_equationt::clear_assertions()
 
 runtime_encoded_equationt::runtime_encoded_equationt(
   const namespacet &_ns,
-  smt_convt &_conv,
-  const messaget &msg)
+  smt_convt &_conv)
   : symex_target_equationt(_ns, msg), conv(_conv)
 {
   assert_vec_list.emplace_back();
@@ -534,7 +530,7 @@ tvt runtime_encoded_equationt::ask_solver_question(const expr2tc &question)
     res1 == smt_convt::P_ERROR || res1 == smt_convt::P_SMTLIB ||
     res2 == smt_convt::P_ERROR || res2 == smt_convt::P_SMTLIB)
   {
-    msg.error("Solver returned error while asking question");
+    log_error("Solver returned error while asking question");
     abort();
   }
   else if(res1 == smt_convt::P_SATISFIABLE && res2 == smt_convt::P_SATISFIABLE)

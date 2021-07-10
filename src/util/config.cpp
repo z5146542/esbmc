@@ -9,6 +9,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <algorithm>
 
 #include <util/config.h>
+#include <util/message.h>
 
 configt config;
 
@@ -69,7 +70,7 @@ void configt::ansi_ct::set_64()
   alignment = 1;
 }
 
-bool configt::set(const cmdlinet &cmdline, const messaget &msg)
+bool configt::set(const cmdlinet &cmdline)
 {
   // defaults
   ansi_c.set_64();
@@ -104,7 +105,7 @@ bool configt::set(const cmdlinet &cmdline, const messaget &msg)
 
   if(cmdline.isset("floatbv") && cmdline.isset("fixedbv"))
   {
-    msg.error("Can't set both floatbv and fixedbv modes");
+    log_error("Can't set both floatbv and fixedbv modes");
     return true;
   }
 
@@ -179,7 +180,7 @@ bool configt::set(const cmdlinet &cmdline, const messaget &msg)
 
   if(cmdline.isset("little-endian") && cmdline.isset("big-endian"))
   {
-    msg.error("Can't set both little and big endian modes");
+    log_error("Can't set both little and big endian modes");
     return true;
   }
 

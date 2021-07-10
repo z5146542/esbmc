@@ -57,9 +57,8 @@ public:
   rw_sett(
     const namespacet &_ns,
     value_setst &_value_sets,
-    goto_programt::const_targett _target,
-    const messaget &msg)
-    : ns(_ns), value_sets(_value_sets), target(_target), msg(msg)
+    goto_programt::const_targett _target)
+    : ns(_ns), value_sets(_value_sets), target(_target)
   {
   }
 
@@ -67,9 +66,8 @@ public:
     const namespacet &_ns,
     value_setst &_value_sets,
     goto_programt::const_targett _target,
-    const codet &code,
-    const messaget &msg)
-    : ns(_ns), value_sets(_value_sets), target(_target), msg(msg)
+    const codet &code)
+    : ns(_ns), value_sets(_value_sets), target(_target)
   {
     compute(code);
   }
@@ -88,7 +86,6 @@ protected:
   const namespacet &ns;
   value_setst &value_sets;
   const goto_programt::const_targett target;
-  const messaget &msg;
 
   void assign(const exprt &lhs, const exprt &rhs);
 

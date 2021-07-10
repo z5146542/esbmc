@@ -43,8 +43,7 @@ class clang_c_convertert
 public:
   clang_c_convertert(
     contextt &_context,
-    std::vector<std::unique_ptr<clang::ASTUnit>> &_ASTs,
-    const messaget &msg);
+    std::vector<std::unique_ptr<clang::ASTUnit>> &_ASTs);
   virtual ~clang_c_convertert() = default;
 
   bool convert();
@@ -54,7 +53,6 @@ protected:
   contextt &context;
   namespacet ns;
   std::vector<std::unique_ptr<clang::ASTUnit>> &ASTs;
-  const messaget &msg;
 
   unsigned int current_scope_var_num;
 

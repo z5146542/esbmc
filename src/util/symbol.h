@@ -39,14 +39,11 @@ public:
 
   void swap(symbolt &b);
 
-  void show(std::ostream &out) const;
   DUMP_METHOD void dump() const;
 
   void to_irep(irept &dest) const;
   void from_irep(const irept &src);
 };
-
-std::ostream &operator<<(std::ostream &out, const symbolt &symbol);
 
 typedef std::list<symbolt *> symbol_listt;
 

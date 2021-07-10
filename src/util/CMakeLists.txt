@@ -21,6 +21,4 @@ target_include_directories(util_esbmc
         PRIVATE ${Boost_INCLUDE_DIRS}
         )
 
-target_link_libraries(util_esbmc default_message fmt::fmt ${Boost_LIBRARIES})
-
-add_subdirectory(message)
+target_link_libraries(util_esbmc fmt::fmt ${Boost_LIBRARIES})

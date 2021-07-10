@@ -1,6 +1,5 @@
 #include <bitwuzla_conv.h>
 #include <cstring>
-#include <util/message/format.h>
 
 #define new_ast new_solver_ast<bitw_smt_ast>
 
@@ -15,8 +14,7 @@ smt_convt *create_new_bitwuzla_solver(
   const namespacet &ns,
   tuple_iface **tuple_api [[gnu::unused]],
   array_iface **array_api,
-  fp_convt **fp_api,
-  const messaget &msg)
+  fp_convt **fp_api)
 {
   bitwuzla_convt *conv = new bitwuzla_convt(ns, options, msg);
   *array_api = static_cast<array_iface *>(conv);
@@ -24,10 +22,7 @@ smt_convt *create_new_bitwuzla_solver(
   return conv;
 }
 
-bitwuzla_convt::bitwuzla_convt(
-  const namespacet &ns,
-  const optionst &options,
-  const messaget &msg)
+bitwuzla_convt::bitwuzla_convt(const namespacet &ns, const optionst &options)
   : smt_convt(ns, options, msg), array_iface(true, true), fp_convt(this, msg)
 {
   bitw = bitwuzla_new();
@@ -547,13 +542,13 @@ smt_astt bitwuzla_convt::mk_select(smt_astt a, smt_astt b)
 
 smt_astt bitwuzla_convt::mk_smt_int(const BigInt &theint [[gnu::unused]])
 {
-  msg.error("ESBMC can't create integer sorts with Bitwuzla yet");
+  log_error("ESBMC can't create integer sorts with Bitwuzla yet");
   abort();
 }
 
 smt_astt bitwuzla_convt::mk_smt_real(const std::string &str [[gnu::unused]])
 {
-  msg.error("ESBMC can't create real sorts with Bitwuzla yet");
+  log_error("ESBMC can't create real sorts with Bitwuzla yet");
   abort();
 }
 
@@ -605,7 +600,7 @@ bitwuzla_convt::mk_smt_symbol(const std::string &name, const smt_sort *s)
     break;
 
   default:
-    msg.error("Unknown type for symbol");
+    log_error("Unknown type for symbol");
     abort();
   }
 
@@ -690,7 +685,7 @@ bool bitwuzla_convt::get_bool(smt_astt a)
     res = false;
     break;
   default:
-    msg.error("Can't get boolean value from Bitwuzla");
+    log_error("Can't get boolean value from Bitwuzla");
     abort();
   }
   return res;

@@ -1,5 +1,6 @@
 #include <goto-programs/goto_loops.h>
 #include <util/expr_util.h>
+#include <util/message.h>
 
 bool check_var_name(const expr2tc &expr)
 {
@@ -135,8 +136,7 @@ void goto_loopst::get_modified_variables(
 
     if(it == goto_functions.function_map.end())
     {
-      message_handler.error(fmt::format(
-        "failed to find `{}' in function_map", id2string(identifier)));
+      log_error("failed to find", identifier.as_string(), "in function_map");
       abort();
     }
 

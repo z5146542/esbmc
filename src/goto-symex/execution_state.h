@@ -21,7 +21,7 @@
 #include <map>
 #include <set>
 #include <util/irep2.h>
-#include <util/message/message.h>
+
 #include <util/std_expr.h>
 
 class reachability_treet;
@@ -187,7 +187,7 @@ public:
   {
     if(tid >= thread_start_data.size())
     {
-      msg.error(
+      log_error(
         fmt::format("Setting thread data for nonexistant thread {}", tid));
       abort();
     }
@@ -200,7 +200,7 @@ public:
   {
     if(tid >= thread_start_data.size())
     {
-      msg.error(
+      log_error(
         fmt::format("Setting thread data for nonexistant thread {}", tid));
       abort();
     }

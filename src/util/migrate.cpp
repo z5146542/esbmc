@@ -1,13 +1,12 @@
 #include <util/c_types.h>
 #include <util/config.h>
 #include <util/irep2_utils.h>
+#include <util/message.h>
 #include <util/migrate.h>
 #include <util/namespace.h>
 #include <util/prefix.h>
 #include <util/simplify_expr.h>
 #include <util/type_byte_size.h>
-#include <util/message/format.h>
-#include <message/default_message.h>
 
 // File for old irep -> new irep conversions.
 

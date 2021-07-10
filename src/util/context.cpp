@@ -7,7 +7,7 @@ Author: Daniel Kroening, kroening@kroening.com
 \*******************************************************************/
 
 #include <util/context.h>
-#include <util/message/default_message.h>
+#include <util/message.h>
 
 bool contextt::add(const symbolt &symbol)
 {
@@ -46,7 +46,7 @@ bool contextt::move(symbolt &symbol, symbolt *&new_symbol)
 
 void contextt::dump() const
 {
-  msg.debug("\nSymbols:");
+  log_debug("\nSymbols:");
   // Do assignments based on "value".
   foreach_operand([](const symbolt &s) { s.dump(); });
 }
@@ -72,7 +72,7 @@ void contextt::erase_symbol(irep_idt name)
   symbolst::iterator it = symbols.find(name);
   if(it == symbols.end())
   {
-    msg.error("Couldn't find symbol to erase");
+    log_error("Couldn't find symbol to erase");
     abort();
   }
 

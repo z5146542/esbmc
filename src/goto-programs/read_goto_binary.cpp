@@ -12,8 +12,7 @@ Author:
 void read_goto_binary(
   std::istream &in,
   contextt &context,
-  goto_functionst &dest,
-  const messaget &message_handler)
+  goto_functionst &dest)
 {
-  read_bin_goto_object(in, "", context, dest, message_handler);
+  read_bin_goto_object(in, "", context, dest);
 }

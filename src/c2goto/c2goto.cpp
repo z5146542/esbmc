@@ -8,7 +8,6 @@
 #include <util/config.h>
 #include <util/irep2.h>
 #include <util/parseoptions.h>
-#include <util/message/default_message.h>
 
 const struct group_opt_templ c2goto_options[] = {
   {"Basic Usage",
@@ -43,7 +42,7 @@ const struct group_opt_templ c2goto_options[] = {
 class c2goto_parseopt : public parseoptions_baset, public language_uit
 {
 public:
-  c2goto_parseopt(int argc, const char **argv, const messaget &msg)
+  c2goto_parseopt(int argc, const char **argv)
     : parseoptions_baset(c2goto_options, argc, argv, msg),
       language_uit(cmdline, msg)
   {
@@ -57,7 +56,7 @@ public:
 
     if(!cmdline.isset("output"))
     {
-      msg.error("Must set output file");
+      log_error("Must set output file");
       return 1;
     }
 
@@ -71,7 +70,7 @@ public:
 
     if(write_goto_binary(out, context, goto_functions))
     {
-      msg.error("Failed to write C library to binary obj");
+      log_error("Failed to write C library to binary obj");
       return 1;
     }
 

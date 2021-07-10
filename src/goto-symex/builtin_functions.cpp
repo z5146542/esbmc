@@ -468,7 +468,7 @@ void goto_symext::intrinsic_switch_to(
   const expr2tc &num = call.operands[0];
   if(!is_constant_int2t(num))
   {
-    msg.error(
+    log_error(
       fmt::format("Can't switch to non-constant thread id no\n{}", *num));
     abort();
   }
@@ -521,7 +521,7 @@ void goto_symext::intrinsic_set_thread_data(
 
   if(!is_constant_int2t(threadid))
   {
-    msg.error("__ESBMC_set_start_data received nonconstant thread id");
+    log_error("__ESBMC_set_start_data received nonconstant thread id");
     abort();
   }
   unsigned int tid = to_constant_int2t(threadid).value.to_uint64();
@@ -542,7 +542,7 @@ void goto_symext::intrinsic_get_thread_data(
 
   if(!is_constant_int2t(threadid))
   {
-    msg.error("__ESBMC_get_start_data received nonconstant thread id");
+    log_error("__ESBMC_get_start_data received nonconstant thread id");
     abort();
   }
 
@@ -582,14 +582,14 @@ void goto_symext::intrinsic_spawn_thread(
     art.goto_functions.function_map.find(symname);
   if(it == art.goto_functions.function_map.end())
   {
-    msg.error(
+    log_error(
       fmt::format("Spawning thread \"{}{}", symname, "\": symbol not found"));
     abort();
   }
 
   if(!it->second.body_available)
   {
-    msg.error(fmt::format("Spawning thread \"{}{}", symname, "\": no body"));
+    log_error(fmt::format("Spawning thread \"{}{}", symname, "\": no body"));
     abort();
   }
 
@@ -632,7 +632,7 @@ void goto_symext::intrinsic_get_thread_state(
 
   if(!is_constant_int2t(threadid))
   {
-    msg.error("__ESBMC_get_thread_state received nonconstant thread id");
+    log_error("__ESBMC_get_thread_state received nonconstant thread id");
     abort();
   }
 
@@ -695,7 +695,7 @@ void goto_symext::intrinsic_register_monitor(
 
   if(!is_constant_int2t(threadid))
   {
-    msg.error("__ESBMC_register_monitor received nonconstant thread id");
+    log_error("__ESBMC_register_monitor received nonconstant thread id");
     abort();
   }
 
@@ -1005,7 +1005,7 @@ void goto_symext::intrinsic_memset(
       }
       else
       {
-        msg.error("Logic mismatch in memset intrinsic");
+        log_error("Logic mismatch in memset intrinsic");
         abort();
       }
     }

@@ -21,7 +21,7 @@ Author: Lucas Cordeiro, lcc08r@ecs.soton.ac.uk
 #include <util/crypto_hash.h>
 #include <util/expr_util.h>
 #include <util/i2string.h>
-#include <util/message/message.h>
+
 #include <util/std_expr.h>
 
 reachability_treet::reachability_treet(
@@ -375,9 +375,7 @@ reachability_treet::dfs_position::dfs_position(const reachability_treet &rt)
   ileaves = 0;  // Can use this depending on a future refactor.
 }
 
-reachability_treet::dfs_position::dfs_position(
-  const std::string &&filename,
-  const messaget &msg)
+reachability_treet::dfs_position::dfs_position(const std::string &&filename)
 {
   read_from_file(std::move(filename), msg);
 }
@@ -386,8 +384,7 @@ const uint32_t reachability_treet::dfs_position::file_magic =
   0x4543484B; //'ECHK'
 
 bool reachability_treet::dfs_position::write_to_file(
-  const std::string &&filename,
-  const messaget &msg) const
+  const std::string &&filename) const
 {
   uint8_t buffer[8192];
   reachability_treet::dfs_position::file_hdr hdr;
@@ -400,7 +397,7 @@ bool reachability_treet::dfs_position::write_to_file(
   f = fopen(filename.c_str(), "wb");
   if(f == nullptr)
   {
-    msg.error("Couldn't open checkpoint output file");
+    log_error("Couldn't open checkpoint output file");
     return true;
   }
 
@@ -448,14 +445,13 @@ bool reachability_treet::dfs_position::write_to_file(
   return false;
 
 fail:
-  msg.error("Write error writing checkpoint file");
+  log_error("Write error writing checkpoint file");
   fclose(f);
   return true;
 }
 
 bool reachability_treet::dfs_position::read_from_file(
-  const std::string &&filename,
-  const messaget &msg)
+  const std::string &&filename)
 {
   reachability_treet::dfs_position::file_hdr hdr;
   reachability_treet::dfs_position::file_entry entry;
@@ -466,7 +462,7 @@ bool reachability_treet::dfs_position::read_from_file(
   f = fopen(filename.c_str(), "rb");
   if(f == nullptr)
   {
-    msg.error("Couldn't open checkpoint input file");
+    log_error("Couldn't open checkpoint input file");
     return true;
   }
 
@@ -475,7 +471,7 @@ bool reachability_treet::dfs_position::read_from_file(
 
   if(hdr.magic != htonl(file_magic))
   {
-    msg.error("Magic number indicates that this isn't a checkpoint file");
+    log_error("Magic number indicates that this isn't a checkpoint file");
     fclose(f);
     return true;
   }
@@ -493,7 +489,7 @@ bool reachability_treet::dfs_position::read_from_file(
     assert(state.num_threads < 65536);
     if(state.cur_thread >= state.num_threads)
     {
-      msg.error("Inconsistent checkpoint data");
+      log_error("Inconsistent checkpoint data");
       fclose(f);
       return true;
     }
@@ -516,7 +512,7 @@ bool reachability_treet::dfs_position::read_from_file(
   return false;
 
 fail:
-  msg.error("Read error on checkpoint file");
+  log_error("Read error on checkpoint file");
   fclose(f);
   return true;
 }
@@ -749,7 +745,7 @@ bool reachability_treet::restore_from_dfs_state(void *)
 
     if (get_cur_state().threads_state.size() != it->num_threads)
 {
-msg.error("Unexpected number of threads when reexploring checkpoint");
+log_error("Unexpected number of threads when reexploring checkpoint");
 abort();
 }
 
@@ -763,7 +759,7 @@ abort();
 #if 0
     if (get_cur_state().get_active_state().source.pc->location_number !=
         it->location_number) {
-msg.error("Interleave at unexpected location when restoring checkpoint").
+log_error("Interleave at unexpected location when restoring checkpoint").
 abort();
 }
 #endif

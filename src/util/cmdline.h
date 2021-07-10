@@ -14,7 +14,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <vector>
 #include <map>
 #include <boost/program_options.hpp>
-#include <util/message/message.h>
+
 struct opt_templ
 {
   const char *optstring;
@@ -40,13 +40,12 @@ public:
   argst args;
   boost::program_options::variables_map vm;
   boost::program_options::options_description cmdline_options;
-  cmdlinet(const messaget &msg) : msg(msg)
-  {
-  }
+
+  cmdlinet() = default;
   ~cmdlinet();
+
   typedef std::map<std::string, std::list<std::string>> options_mapt;
   options_mapt options_map;
-  const messaget &msg;
 };
 
 #endif

@@ -639,8 +639,7 @@ const std::regex
 void reformat_assignment_array(
   const namespacet &ns,
   const goto_trace_stept &step,
-  std::string &assignment,
-  const messaget &msg)
+  std::string &assignment)
 {
   std::regex re{R"(((-?[0-9]+(.[0-9]+)?)))"};
   using reg_itr = std::regex_token_iterator<std::string::iterator>;
@@ -665,8 +664,7 @@ const std::regex regex_structs(
 void reformat_assignment_structs(
   const namespacet &ns,
   const goto_trace_stept &step,
-  std::string &assignment,
-  const messaget &msg)
+  std::string &assignment)
 {
   std::regex re{R"((((.([a-zA-Z0-9_]+)=(-?[0-9]+(.[0-9]+)?))+)))"};
   using reg_itr = std::regex_token_iterator<std::string::iterator>;
@@ -707,10 +705,8 @@ void check_replace_invalid_assignment(std::string &assignment)
 }
 
 /* */
-std::string get_formated_assignment(
-  const namespacet &ns,
-  const goto_trace_stept &step,
-  const messaget &msg)
+std::string
+get_formated_assignment(const namespacet &ns, const goto_trace_stept &step)
 {
   std::string assignment = "";
   if(
@@ -733,10 +729,7 @@ std::string get_formated_assignment(
 }
 
 /* */
-bool is_valid_witness_step(
-  const namespacet &ns,
-  const goto_trace_stept &step,
-  const messaget &msg)
+bool is_valid_witness_step(const namespacet &ns, const goto_trace_stept &step)
 {
   languagest languages(ns, "C", msg);
   std::string lhsexpr;
@@ -751,8 +744,7 @@ bool is_valid_witness_step(
 /* */
 bool is_valid_witness_expr(
   const namespacet &ns,
-  const irep_container<expr2t> &exp,
-  const messaget &msg)
+  const irep_container<expr2t> &exp)
 {
   languagest languages(ns, "C", msg);
   std::string value;

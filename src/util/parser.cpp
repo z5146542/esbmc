@@ -7,6 +7,7 @@ Author: Daniel Kroening, kroening@kroening.com
 \*******************************************************************/
 
 #include <util/i2string.h>
+#include <util/message.h>
 #include <util/parser.h>
 
 #ifdef _WIN32
@@ -35,5 +36,5 @@ void parsert::parse_error(const std::string &message, const std::string &before)
   std::string tmp = message;
   if(before != "")
     tmp += " before `" + before + "'";
-  msg.print(VerbosityLevel::Error, tmp, location);
+  log_error(tmp, location.to_string());
 }

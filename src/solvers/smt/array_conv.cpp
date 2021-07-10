@@ -2,6 +2,7 @@
 #include <set>
 #include <solvers/smt/array_conv.h>
 #include <util/c_types.h>
+#include <util/message.h>
 #include <utility>
 
 static inline bool array_indexes_are_same(
@@ -99,7 +100,7 @@ smt_astt array_convt::mk_array_symbol(
   size_t array_size = 1UL << domain_width;
 
   // Create new AST storage
-  array_ast *mast = new_ast(ms, ctx->msg);
+  array_ast *mast = new_ast(ms);
   mast->symname = name;
 
   if(is_unbounded_array(mast->sort))
@@ -187,7 +188,7 @@ smt_astt array_convt::mk_store(
 
   assert(ma->array_fields.size() != 0);
 
-  array_ast *mast = new_ast(ressort, ma->array_fields, ctx->msg);
+  array_ast *mast = new_ast(ressort, ma->array_fields);
 
   // If this is a constant index, simply update that particular field.
   if(is_constant_int2t(idx))
@@ -294,7 +295,7 @@ smt_astt array_convt::mk_unbounded_store(
   array_indexes[ma->base_array_id].insert(new_idx_rec);
 
   // More nuanced: allocate a new array representation.
-  array_ast *newarr = new_ast(ressort, ctx->msg);
+  array_ast *newarr = new_ast(ressort);
   newarr->base_array_id = ma->base_array_id;
   newarr->array_update_num = array_updates[ma->base_array_id].size();
 
@@ -337,7 +338,7 @@ smt_astt array_convt::array_ite(
   assert(
     true_arr->array_fields.size() != 0 &&
     true_arr->array_fields.size() == false_arr->array_fields.size());
-  array_ast *mast = new_ast(thesort, ctx->msg);
+  array_ast *mast = new_ast(thesort);
   unsigned long i;
   for(i = 0; i < true_arr->array_fields.size(); i++)
   {
@@ -363,7 +364,7 @@ smt_astt array_convt::unbounded_array_ite(
   unsigned int new_arr_id =
     std::min(true_arr->base_array_id, false_arr->base_array_id); // yolo
 
-  array_ast *newarr = new_ast(thesort, ctx->msg);
+  array_ast *newarr = new_ast(thesort);
   newarr->base_array_id = new_arr_id;
   newarr->array_update_num = array_updates[true_arr->base_array_id].size();
 
@@ -405,7 +406,7 @@ smt_astt array_convt::convert_array_of_wsort(
   unsigned long domain_width,
   smt_sortt arr_sort)
 {
-  array_ast *mast = new_ast(arr_sort, ctx->msg);
+  array_ast *mast = new_ast(arr_sort);
   if(is_unbounded_array(arr_sort))
   {
     // If this is an unbounded array, simply store the value of the initializer
@@ -1366,4 +1367,11 @@ smt_astt array_ast::ite(
   smt_astt falseop) const
 {
   return array_ctx->array_ite(cond, this, array_downcast(falseop), sort);
+}
+
+void array_ast::dump() const
+{
+  log_debug("name:", symname);
+  for(auto const &e : array_fields)
+    e->dump();
 }

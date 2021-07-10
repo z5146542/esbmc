@@ -297,7 +297,7 @@ void goto_symext::symex_step(reachability_treet &art)
     oss << "GOTO instruction type " << instruction.type;
     oss << " not handled in goto_symext::symex_step"
         << "\n";
-    msg.error(oss.str());
+    log_error(oss.str());
     abort();
   }
 }
@@ -501,7 +501,7 @@ void goto_symext::run_intrinsic(
     oss << "\n(NB: the C spec reserves the __ prefix for the compiler"
            " and environment)\n";
 
-    msg.error(oss.str());
+    log_error(oss.str());
     abort();
   }
 }

@@ -15,11 +15,7 @@ Author: Daniel Kroening
 #include <util/i2string.h>
 #include <util/xml_irep.h>
 
-void convert(
-  const namespacet &ns,
-  const goto_tracet &goto_trace,
-  xmlt &xml,
-  const messaget &msg)
+void convert(const namespacet &ns, const goto_tracet &goto_trace, xmlt &xml)
 {
   xml = xmlt("goto_trace");
 

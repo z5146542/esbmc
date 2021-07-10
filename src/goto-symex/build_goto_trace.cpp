@@ -2,10 +2,7 @@
 #include <goto-symex/build_goto_trace.h>
 #include <goto-symex/witnesses.h>
 
-expr2tc build_lhs(
-  std::shared_ptr<smt_convt> &smt_conv,
-  const expr2tc &lhs,
-  const messaget &msg)
+expr2tc build_lhs(std::shared_ptr<smt_convt> &smt_conv, const expr2tc &lhs)
 {
   if(is_nil_expr(lhs))
     return lhs;
@@ -42,10 +39,7 @@ expr2tc build_lhs(
   return new_lhs;
 }
 
-expr2tc build_rhs(
-  std::shared_ptr<smt_convt> &smt_conv,
-  const expr2tc &rhs,
-  const messaget &msg)
+expr2tc build_rhs(std::shared_ptr<smt_convt> &smt_conv, const expr2tc &rhs)
 {
   if(is_nil_expr(rhs) || is_constant_expr(rhs))
     return rhs;
@@ -59,8 +53,7 @@ void build_goto_trace(
   const std::shared_ptr<symex_target_equationt> &target,
   std::shared_ptr<smt_convt> &smt_conv,
   goto_tracet &goto_trace,
-  const bool &is_compact_trace,
-  const messaget &msg)
+  const bool &is_compact_trace)
 {
   unsigned step_nr = 0;
 
@@ -124,8 +117,7 @@ void build_goto_trace(
 void build_successful_goto_trace(
   const std::shared_ptr<symex_target_equationt> &target,
   const namespacet &ns,
-  goto_tracet &goto_trace,
-  const messaget &msg)
+  goto_tracet &goto_trace)
 {
   unsigned step_nr = 0;
   for(symex_target_equationt::SSA_stepst::const_iterator it =

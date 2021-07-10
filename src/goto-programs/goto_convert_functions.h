@@ -18,8 +18,7 @@ Date: June 2003
 void goto_convert(
   contextt &context,
   optionst &options,
-  goto_functionst &functions,
-  const messaget &message_handler);
+  goto_functionst &functions);
 
 class goto_convert_functionst : public goto_convertt
 {
@@ -47,10 +46,9 @@ public:
   goto_convert_functionst(
     contextt &_context,
     optionst &_options,
-    goto_functionst &_functions,
-    const messaget &_message_handler);
+    goto_functionst &_functions);
 
-  ~goto_convert_functionst() override = default;
+  ~goto_convert_functionst() = default;
 
 protected:
   goto_functionst &functions;

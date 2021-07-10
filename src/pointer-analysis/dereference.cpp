@@ -22,6 +22,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/expr_util.h>
 #include <util/i2string.h>
 #include <util/irep2.h>
+#include <util/message.h>
 #include <util/migrate.h>
 #include <util/prefix.h>
 #include <util/pretty.h>
@@ -416,8 +417,8 @@ expr2tc dereferencet::dereference_expr_nonscalar(
     }
     else
     {
-      msg.error(fmt::format(
-        "Unexpected expression in dereference_expr_nonscalar\n{}", *expr));
+      log_error("Unexpected expression in dereference_expr_nonscalar");
+      expr->dump();
       abort();
     }
 
@@ -613,7 +614,7 @@ expr2tc dereferencet::build_reference_to(
 
   if(!is_object_descriptor2t(what))
   {
-    msg.error(fmt::format("unknown points-to: {}", get_expr_id(what)));
+    log_error("unknown points-to:", get_expr_id(what));
     abort();
   }
 
@@ -820,13 +821,13 @@ void dereferencet::build_reference_rec(
     oss << "\n";
     oss << "(It isn't allowed by C anyway)";
     oss << "\n";
-    msg.error(oss.str());
+    log_error(oss.str());
     abort();
   }
   else
   {
-    msg.error(
-      fmt::format("Unrecognized dest type during dereference\n{}", *type));
+    log_error("Unrecognized dest type during dereference");
+    type->dump();
     abort();
   }
 
@@ -834,7 +835,7 @@ void dereferencet::build_reference_rec(
     flags |= flag_src_struct;
   else if(is_union_type(value))
   {
-    msg.error("Dereference target of type union is now illegal");
+    log_error("Dereference target of type union is now illegal");
     abort();
   }
   else if(is_scalar_type(value))
@@ -843,8 +844,8 @@ void dereferencet::build_reference_rec(
     flags |= flag_src_array;
   else
   {
-    msg.error(fmt::format(
-      "Unrecognized src type during dereference\n{}", *value->type));
+    log_error("Unrecognized src type during dereference");
+    value->type->dump();
     abort();
   }
 
@@ -938,7 +939,7 @@ void dereferencet::build_reference_rec(
 
   // No scope for constructing references to arrays
   default:
-    msg.error("Unrecognized input to build_reference_rec");
+    log_error("Unrecognized input to build_reference_rec");
     abort();
   }
 }
@@ -1485,7 +1486,7 @@ void dereferencet::construct_struct_ref_from_const_offset(
   oss << "Unexpectedly " << get_type_id(value->type) << " type'd";
   oss << " argument to construct_struct_ref"
       << "\n";
-  msg.error(oss.str());
+  log_error(oss.str());
   abort();
 }
 

@@ -13,6 +13,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/base_type.h>
 #include <util/cprover_prefix.h>
 #include <util/expr_util.h>
+#include <util/message.h>
 #include <util/prefix.h>
 #include <util/std_code.h>
 #include <util/std_expr.h>
@@ -34,8 +35,8 @@ void goto_inlinet::parameter_assignments(
     // if you run out of actual arguments there was a mismatch
     if(it1 == arguments.end())
     {
-      err_location(location);
-      throw "function call: not enough arguments";
+      log_error("function call: not enough arguments", location.as_string());
+      abort();
     }
 
     const exprt &argument = static_cast<const exprt &>(argument_type);
@@ -94,14 +95,15 @@ void goto_inlinet::parameter_assignments(
         }
         else
         {
-          err_location(location);
-
-          str << "function call: argument `" << identifier
-              << "' type mismatch: got "
-              << from_type(ns, identifier, it1->type(), message_handler)
-              << ", expected "
-              << from_type(ns, identifier, arg_type, message_handler);
-          throw 0;
+          log_error(
+            "function call: argument `",
+            identifier.as_string(),
+            "' type mismatch: got ",
+            from_type(ns, identifier, it1->type()),
+            ", expected ",
+            from_type(ns, identifier, arg_type));
+          log_error(location.as_string());
+          abort();
         }
       }
 
@@ -137,7 +139,7 @@ void goto_inlinet::replace_return(
     {
       if(lhs.is_not_nil())
       {
-        goto_programt tmp(message_handler);
+        goto_programt tmp;
         goto_programt::targett assignment = tmp.add_instruction(ASSIGN);
 
         const code_return2t &ret = to_code_return2t(it->code);
@@ -162,7 +164,7 @@ void goto_inlinet::replace_return(
         // Encode evaluation of return expr, so that returns with pointer
         // derefs in them still get dereferenced, even when the result is
         // discarded.
-        goto_programt tmp(message_handler);
+        goto_programt tmp;
         goto_programt::targett expression = tmp.add_instruction(OTHER);
 
         expression->make_other();
@@ -192,9 +194,11 @@ void goto_inlinet::expand_function_call(
   // look it up
   if(function.id() != "symbol")
   {
-    err_location(function);
-    throw "function_call expects symbol as function operand, "
-          "but got `"+function.id_string()+"'";
+    log_error(
+      "function_call expects symbol as function operand, but got",
+      function.id_string());
+    function.dump();
+    abort();
   }
 
   const irep_idt &identifier = function.identifier();
@@ -209,8 +213,7 @@ void goto_inlinet::expand_function_call(
     }
 
     // it's really recursive. Give up.
-    err_location(function);
-    warning("Recursion is ignored when inlining");
+    log_warning("Recursion is ignored when inlining", identifier.as_string());
     target->make_skip();
 
     target++;
@@ -222,9 +225,9 @@ void goto_inlinet::expand_function_call(
 
   if(m_it == goto_functions.function_map.end())
   {
-    err_location(function);
-    str << "failed to find function `" << identifier << "'";
-    throw 0;
+    log_error("failed to find function", identifier.as_string());
+    function.dump();
+    abort();
   }
 
   goto_functiont &f = m_it->second;
@@ -250,7 +253,7 @@ void goto_inlinet::expand_function_call(
     recursion_sett::iterator recursion_it =
       recursion_set.insert(identifier).first;
 
-    goto_programt tmp2(message_handler);
+    goto_programt tmp2;
     tmp2.copy_from(f.body);
 
     assert(tmp2.instructions.back().is_end_function());
@@ -258,7 +261,7 @@ void goto_inlinet::expand_function_call(
 
     replace_return(tmp2, lhs, constrain);
 
-    goto_programt tmp(message_handler);
+    goto_programt tmp;
     parameter_assignments(
       tmp2.instructions.front().location, f.type, arguments, tmp);
     tmp.destructive_append(tmp2);
@@ -299,13 +302,9 @@ void goto_inlinet::expand_function_call(
   else
   {
     if(no_body_set.insert(identifier).second)
-    {
-      err_location(function);
-      str << "no body for function `" << identifier << "'";
-      warning();
-    }
+      log_warning("no body for function", identifier.as_string());
 
-    goto_programt tmp(message_handler);
+    goto_programt tmp;
 
     // evaluate function arguments -- they might have
     // pointer dereferencing or the like
@@ -420,10 +419,9 @@ void goto_inline(
   goto_functionst &goto_functions,
   optionst &options,
   const namespacet &ns,
-  goto_programt &dest,
-  const messaget &message_handler)
+  goto_programt &dest)
 {
-  goto_inlinet goto_inline(goto_functions, options, ns, message_handler);
+  goto_inlinet goto_inline(goto_functions, options, ns);
 
   {
     // find main
@@ -444,23 +442,17 @@ void goto_inline(
     goto_inline.goto_inline(dest);
   }
 
-  catch(int)
-  {
-    goto_inline.error();
-  }
-
   catch(const char *e)
   {
-    goto_inline.error(e);
+    log_error(e);
+    abort();
   }
 
   catch(const std::string &e)
   {
-    goto_inline.error(e);
+    log_error(e);
+    abort();
   }
-
-  if(goto_inline.get_error_found())
-    throw 0;
 
   // clean up
   for(auto &it : goto_functions.function_map)
@@ -474,10 +466,9 @@ void goto_inline(
 void goto_inline(
   goto_functionst &goto_functions,
   optionst &options,
-  const namespacet &ns,
-  const messaget &message_handler)
+  const namespacet &ns)
 {
-  goto_inlinet goto_inline(goto_functions, options, ns, message_handler);
+  goto_inlinet goto_inline(goto_functions, options, ns);
 
   try
   {
@@ -491,23 +482,17 @@ void goto_inline(
     goto_inline.goto_inline(it->second.body);
   }
 
-  catch(int)
-  {
-    goto_inline.error();
-  }
-
   catch(const char *e)
   {
-    goto_inline.error(e);
+    log_error(e);
+    abort();
   }
 
   catch(const std::string &e)
   {
-    goto_inline.error(e);
+    log_error(e);
+    abort();
   }
-
-  if(goto_inline.get_error_found())
-    throw 0;
 
   // clean up
   for(auto &it : goto_functions.function_map)
@@ -522,10 +507,9 @@ void goto_partial_inline(
   goto_functionst &goto_functions,
   optionst &options,
   const namespacet &ns,
-  const messaget &message_handler,
   unsigned _smallfunc_limit)
 {
-  goto_inlinet goto_inline(goto_functions, options, ns, message_handler);
+  goto_inlinet goto_inline(goto_functions, options, ns);
 
   goto_inline.smallfunc_limit = _smallfunc_limit;
 
@@ -540,21 +524,15 @@ void goto_partial_inline(
     }
   }
 
-  catch(int)
-  {
-    goto_inline.error();
-  }
-
   catch(const char *e)
   {
-    goto_inline.error(e);
+    log_error(e);
+    abort();
   }
 
   catch(const std::string &e)
   {
-    goto_inline.error(e);
+    log_error(e);
+    abort();
   }
-
-  if(goto_inline.get_error_found())
-    throw 0;
 }

@@ -10,7 +10,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <cstdlib>
 #include <util/i2string.h>
 #include <util/irep.h>
-#include <util/message/default_message.h>
+#include <util/message.h>
 
 irept nil_rep_storage;
 
@@ -20,8 +20,7 @@ const irept::dt empty_d;
 
 void irept::dump() const
 {
-  default_message msg;
-  msg.debug(pretty(0));
+  log_debug(pretty(0));
 }
 
 const irept &get_nil_irep()

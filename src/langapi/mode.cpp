@@ -49,7 +49,7 @@ int get_mode_filename(const std::string &filename)
   return -1;
 }
 
-languaget *new_language(const char *mode, const messaget &msg)
+languaget *new_language(const char *mode)
 {
   return (*mode_table[get_mode(mode)].new_language)(msg);
 }

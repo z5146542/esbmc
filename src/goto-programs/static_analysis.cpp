@@ -10,6 +10,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <goto-programs/static_analysis.h>
 #include <memory>
 #include <util/expr_util.h>
+#include <util/message.h>
 #include <util/std_code.h>
 #include <util/std_expr.h>
 
@@ -88,7 +89,7 @@ void static_analysis_baset::output(
 
     get_state(i_it).output(ns, out);
     out << "\n";
-    i_it->output_instruction(ns, identifier, out, msg);
+    i_it->output_instruction(ns, identifier, out);
     out << "\n";
   }
 }
@@ -372,8 +373,7 @@ void static_analysis_baset::do_function_call_rec(
   }
   else
   {
-    msg.error(fmt::format(
-      "unexpected function_call argument: ", get_expr_id(function)));
+    log_error("unexpected function_call argument:", get_expr_id(function));
     abort();
   }
 }

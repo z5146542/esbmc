@@ -22,8 +22,7 @@ Author: Daniel Kroening, kroening@kroening.com
 goto_symex_statet::goto_symex_statet(
   renaming::level2t &l2,
   value_sett &vs,
-  const namespacet &_ns,
-  const messaget &msg)
+  const namespacet &_ns)
   : level2(l2), value_set(vs), ns(_ns), msg(msg)
 {
   use_value_set = true;
@@ -35,8 +34,7 @@ goto_symex_statet::goto_symex_statet(
 goto_symex_statet::goto_symex_statet(
   const goto_symex_statet &state,
   renaming::level2t &l2,
-  value_sett &vs,
-  const messaget &msg)
+  value_sett &vs)
   : level2(l2), value_set(vs), ns(state.ns), msg(msg)
 {
   *this = state;

@@ -74,7 +74,7 @@ unsigned goto_symext::argument_assignments(
     // if you run out of actual arguments there was a mismatch
     if(it1 == arguments.end())
     {
-      msg.error("function call: not enough arguments");
+      log_error("function call: not enough arguments");
       abort();
     }
 
@@ -112,7 +112,7 @@ unsigned goto_symext::argument_assignments(
           oss << "function call: argument \"" << id2string(identifier)
               << "\" type mismatch: got " << get_type_id((*it1)->type)
               << ", expected " << get_type_id(arg_type) << '\n';
-          msg.error(oss.str());
+          log_error(oss.str());
           abort();
         }
       }
@@ -153,7 +153,7 @@ unsigned goto_symext::argument_assignments(
 
       if(new_context.move(symbol))
       {
-        msg.error("Couldn't add new va_arg symbol");
+        log_error("Couldn't add new va_arg symbol");
         abort();
       }
       // 'Declare' the argument before assigning a value to it
@@ -203,7 +203,7 @@ void goto_symext::symex_function_call_code(const expr2tc &expr)
       return;
     }
 
-    msg.error(
+    log_error(
       "failed to find `" + get_pretty_name(identifier.as_string()) +
       "' in function_map");
     abort();
@@ -292,7 +292,7 @@ void goto_symext::symex_function_call_code(const expr2tc &expr)
         << "arguments doesn't match type definition; some inconsistent "
         << "rewriting occured"
         << "\n";
-    msg.error(oss.str());
+    log_error(oss.str());
     abort();
   }
 
@@ -310,7 +310,7 @@ void goto_symext::symex_function_call_code(const expr2tc &expr)
 }
 
 static std::list<std::pair<guardt, symbol2tc>>
-get_function_list(const expr2tc &expr, const messaget &msg)
+get_function_list(const expr2tc &expr)
 {
   std::list<std::pair<guardt, symbol2tc>> l;
 
@@ -346,7 +346,7 @@ get_function_list(const expr2tc &expr, const messaget &msg)
   if(is_typecast2t(expr))
     return get_function_list(to_typecast2t(expr).from, msg);
 
-  msg.error(fmt::format(
+  log_error(fmt::format(
     "Unexpected irep id {} {}",
     get_expr_id(expr),
     " in function ptr dereference"));
@@ -370,7 +370,7 @@ void goto_symext::symex_function_call_deref(const expr2tc &expr)
     std::ostringstream oss;
     oss << "Function pointer call with no targets; irep: ";
     oss << call.pretty(0) << "\n";
-    msg.error(oss.str());
+    log_error(oss.str());
     abort();
   }
 
@@ -587,7 +587,7 @@ bool goto_symext::make_return_assignment(expr2tc &assign, const expr2tc &code)
   }
   else if(!is_nil_expr(frame.return_value))
   {
-    msg.error("return with unexpected value");
+    log_error("return with unexpected value");
     abort();
   }
 

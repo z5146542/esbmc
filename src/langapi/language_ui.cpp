@@ -13,7 +13,7 @@ Author: Daniel Kroening, kroening@cs.cmu.edu
 #include <util/i2string.h>
 #include <util/show_symbol_table.h>
 
-language_uit::language_uit(const cmdlinet &__cmdline, const messaget &msg)
+language_uit::language_uit(const cmdlinet &__cmdline)
   : language_files(msg), context(msg), _cmdline(__cmdline), msg(msg)
 {
 }
@@ -35,7 +35,7 @@ bool language_uit::parse(const std::string &filename)
 
   if(mode < 0)
   {
-    msg.error("failed to figure out type of file", filename);
+    log_error("failed to figure out type of file", filename);
     return true;
   }
 
@@ -46,7 +46,7 @@ bool language_uit::parse(const std::string &filename)
   std::ifstream infile(filename.c_str());
   if(!infile)
   {
-    msg.error("failed to open input file", filename);
+    log_error("failed to open input file", filename);
     return true;
   }
 
@@ -65,7 +65,7 @@ bool language_uit::parse(const std::string &filename)
 
   if(language.parse(filename, msg))
   {
-    msg.error("PARSING ERROR");
+    log_error("PARSING ERROR");
     return true;
   }
 
@@ -80,7 +80,7 @@ bool language_uit::typecheck()
 
   if(language_files.typecheck(context))
   {
-    msg.error("CONVERSION ERROR");
+    log_error("CONVERSION ERROR");
     return true;
   }
 
@@ -91,7 +91,7 @@ bool language_uit::final()
 {
   if(language_files.final(context))
   {
-    msg.error("CONVERSION ERROR");
+    log_error("CONVERSION ERROR");
     return true;
   }
 
@@ -104,7 +104,7 @@ void language_uit::show_symbol_table()
 
 void language_uit::show_symbol_table_xml_ui()
 {
-  msg.error("cannot show symbol table in this format");
+  log_error("cannot show symbol table in this format");
 }
 
 void language_uit::show_symbol_table_plain(std::ostream &out)

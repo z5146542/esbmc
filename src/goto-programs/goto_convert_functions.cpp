@@ -15,6 +15,7 @@ Date: June 2003
 #include <util/base_type.h>
 #include <util/c_types.h>
 #include <util/i2string.h>
+#include <util/message.h>
 #include <util/prefix.h>
 #include <util/std_code.h>
 #include <util/std_expr.h>
@@ -23,9 +24,8 @@ Date: June 2003
 goto_convert_functionst::goto_convert_functionst(
   contextt &_context,
   optionst &_options,
-  goto_functionst &_functions,
-  const messaget &_message_handler)
-  : goto_convertt(_context, _options, _message_handler), functions(_functions)
+  goto_functionst &_functions)
+  : goto_convertt(_context, _options), functions(_functions)
 {
 }
 
@@ -103,10 +103,7 @@ void goto_convert_functionst::convert_function(symbolt &symbol)
   tmp_symbol_prefix = id2string(symbol.id) + "::$tmp::";
   temporary_counter = 0;
 
-  auto it = functions.function_map.find(identifier);
-  if(it == functions.function_map.end())
-    functions.function_map.emplace(identifier, message_handler);
-  goto_functiont &f = functions.function_map.at(identifier);
+  goto_functiont &f = functions.function_map[identifier];
   f.type = to_code_type(symbol.type);
   f.body_available = symbol.value.is_not_nil();
 
@@ -115,8 +112,9 @@ void goto_convert_functionst::convert_function(symbolt &symbol)
 
   if(!symbol.value.is_code())
   {
-    err_location(symbol.value);
-    throw "got invalid code for function `" + id2string(identifier) + "'";
+    log_error("got invalid code for function", id2string(identifier));
+    symbol.value.dump();
+    abort();
   }
 
   const codet &code = to_code(symbol.value);
@@ -130,7 +128,7 @@ void goto_convert_functionst::convert_function(symbolt &symbol)
     end_location.make_nil();
 
   // add "end of function"
-  goto_programt tmp_end_function(get_message_handler());
+  goto_programt tmp_end_function;
   goto_programt::targett end_function = tmp_end_function.add_instruction();
   end_function->type = END_FUNCTION;
   end_function->location = end_location;
@@ -187,11 +185,9 @@ void goto_convert_functionst::convert_function(symbolt &symbol)
 void goto_convert(
   contextt &context,
   optionst &options,
-  goto_functionst &functions,
-  const messaget &message_handler)
+  goto_functionst &functions)
 {
-  goto_convert_functionst goto_convert_functions(
-    context, options, functions, message_handler);
+  goto_convert_functionst goto_convert_functions(context, options, functions);
 
   try
   {
@@ -200,23 +196,17 @@ void goto_convert(
     goto_convert_functions.goto_convert();
   }
 
-  catch(int)
-  {
-    goto_convert_functions.error();
-  }
-
   catch(const char *e)
   {
-    goto_convert_functions.error(e);
+    log_error(e);
+    abort();
   }
 
   catch(const std::string &e)
   {
-    goto_convert_functions.error(e);
+    log_error(e);
+    abort();
   }
-
-  if(goto_convert_functions.get_error_found())
-    throw 0;
 }
 
 void goto_convert_functionst::collect_type(
@@ -317,8 +307,8 @@ void goto_convert_functionst::rename_types(
       else
       {
         // And if we fail
-        message_handler.error(fmt::format(
-          "Can't resolve type symbol {} at symbol squashing time", ident));
+        log_error(
+          "Can't resolve type symbol", ident, "at symbol squashing time");
         abort();
       }
     }

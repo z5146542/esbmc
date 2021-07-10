@@ -9,6 +9,7 @@
 
 #include <goto-programs/goto_program_irep.h>
 #include <util/i2string.h>
+#include <util/message.h>
 
 void convert(const goto_programt::instructiont &instruction, irept &irep)
 {
@@ -122,9 +123,9 @@ void convert(const irept &irep, goto_programt &program)
 
       if(fit == program.instructions.end())
       {
-        program.msg.error(
-          "Warning: could not resolve target link "
-          "during irep->goto_program translation.");
+        log_error(
+          "Warning: could not resolve target link during irep->goto_program "
+          "translation.");
         abort();
       }
     }

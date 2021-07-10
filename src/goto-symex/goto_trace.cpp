@@ -20,14 +20,10 @@
 #include <util/arith_tools.h>
 #include <util/std_types.h>
 #include <ostream>
-#include <util/message/default_message.h>
 
 extern std::string verification_file;
 
-void goto_tracet::output(
-  const class namespacet &ns,
-  std::ostream &out,
-  const messaget &msg) const
+void goto_tracet::output(const class namespacet &ns, std::ostream &out) const
 {
   for(const auto &step : steps)
     step.output(ns, out, msg);
@@ -38,13 +34,10 @@ void goto_trace_stept::dump() const
   default_message msg;
   std::ostringstream oss;
   output(*migrate_namespace_lookup, oss, msg);
-  msg.debug(oss.str());
+  log_debug(oss.str());
 }
 
-void goto_trace_stept::output(
-  const namespacet &ns,
-  std::ostream &out,
-  const messaget &msg) const
+void goto_trace_stept::output(const namespacet &ns, std::ostream &out) const
 {
   out << "*** ";
 
@@ -126,8 +119,7 @@ void counterexample_value(
   std::ostream &out,
   const namespacet &ns,
   const expr2tc &lhs,
-  const expr2tc &value,
-  const messaget &msg)
+  const expr2tc &value)
 {
   out << "  " << from_expr(ns, "", lhs, msg);
   if(is_nil_expr(value))
@@ -179,8 +171,7 @@ void counterexample_value(
 void show_goto_trace_gui(
   std::ostream &out,
   const namespacet &ns,
-  const goto_tracet &goto_trace,
-  const messaget &msg)
+  const goto_tracet &goto_trace)
 {
   locationt previous_location;
 
@@ -265,8 +256,7 @@ void show_state_header(
 void violation_graphml_goto_trace(
   optionst &options,
   const namespacet &ns,
-  const goto_tracet &goto_trace,
-  const messaget &msg)
+  const goto_tracet &goto_trace)
 {
   grapht graph(grapht::VIOLATION);
   graph.verified_file = verification_file;
@@ -338,8 +328,7 @@ void violation_graphml_goto_trace(
 void correctness_graphml_goto_trace(
   optionst &options,
   const namespacet &ns,
-  const goto_tracet &goto_trace,
-  const messaget &msg)
+  const goto_tracet &goto_trace)
 {
   grapht graph(grapht::CORRECTNESS);
   graph.verified_file = verification_file;
@@ -385,8 +374,7 @@ void correctness_graphml_goto_trace(
 void show_goto_trace(
   std::ostream &out,
   const namespacet &ns,
-  const goto_tracet &goto_trace,
-  const messaget &msg)
+  const goto_tracet &goto_trace)
 {
   unsigned prev_step_nr = 0;
   bool first_step = true;

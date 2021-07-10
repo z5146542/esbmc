@@ -19,7 +19,6 @@
 #include <set>
 #include <solvers/smt/smt_conv.h>
 #include <util/irep2.h>
-#include <util/message/default_message.h>
 
 static inline bool is_unbounded_array(const smt_sort *s)
 {
@@ -41,12 +40,8 @@ class array_ast : public smt_ast
 public:
 #define array_downcast(x) static_cast<const array_ast *>(x)
 
-  array_ast(
-    array_convt *actx,
-    smt_convt *ctx,
-    const smt_sort *_s,
-    const messaget &msg)
-    : smt_ast(ctx, _s, msg), symname(""), array_ctx(actx)
+  array_ast(array_convt *actx, smt_convt *ctx, const smt_sort *_s)
+    : smt_ast(ctx, _s), symname(""), array_ctx(actx)
   {
   }
 
@@ -54,9 +49,8 @@ public:
     array_convt *actx,
     smt_convt *ctx,
     const smt_sort *_s,
-    std::vector<smt_astt> _a,
-    const messaget &msg)
-    : smt_ast(ctx, _s, msg),
+    std::vector<smt_astt> _a)
+    : smt_ast(ctx, _s),
       symname(""),
       array_fields(std::move(_a)),
       array_ctx(actx)
@@ -77,13 +71,7 @@ public:
 
   smt_astt eq_fixedsize(smt_convt *ctx, const array_ast *other) const;
 
-  void dump() const override
-  {
-    default_message msg;
-    msg.debug(fmt::format("name: {}", symname));
-    for(auto const &e : array_fields)
-      e->dump();
-  }
+  void dump() const override;
 
   std::string symname; // Only if this was produced from mk_smt_symbol.
 
@@ -233,15 +221,14 @@ public:
   void execute_new_updates();
   void apply_new_selects();
 
-  inline array_ast *new_ast(smt_sortt _s, const messaget &msg)
+  inline array_ast *new_ast(smt_sortt _s)
   {
-    return new array_ast(this, ctx, _s, msg);
+    return new array_ast(this, ctx, _s);
   }
 
-  inline array_ast *
-  new_ast(smt_sortt _s, const std::vector<smt_astt> &_a, const messaget &msg)
+  inline array_ast *new_ast(smt_sortt _s, const std::vector<smt_astt> &_a)
   {
-    return new array_ast(this, ctx, _s, _a, msg);
+    return new array_ast(this, ctx, _s, _a);
   }
 
   void push_array_ctx() override;

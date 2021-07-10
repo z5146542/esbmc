@@ -13,13 +13,11 @@ Date: May 2007
 
 #include <goto-programs/goto_functions.h>
 #include <util/context.h>
-#include <util/message/message.h>
 
 bool read_bin_goto_object(
   std::istream &in,
   const std::string &filename,
   contextt &context,
-  goto_functionst &functions,
-  const messaget &msg_hndlr);
+  goto_functionst &functions);
 
 #endif /*READ_BIN_GOTO_OBJECT_H_*/

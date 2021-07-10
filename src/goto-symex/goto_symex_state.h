@@ -109,7 +109,7 @@ public:
     unsigned int thread_id;
     variable_name_sett local_variables;
 
-    explicit goto_statet(const goto_symex_statet &s, const messaget &msg)
+    explicit goto_statet(const goto_symex_statet &s)
       : num_instructions(s.num_instructions),
         level2_ptr(s.level2.clone()),
         level2(*level2_ptr),

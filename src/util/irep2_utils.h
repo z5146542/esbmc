@@ -3,7 +3,7 @@
 
 #include <util/irep2_expr.h>
 #include <util/c_types.h>
-#include <util/message/format.h>
+
 /** Test whether type is an integer. */
 inline bool is_bv_type(const type2tc &t)
 {
