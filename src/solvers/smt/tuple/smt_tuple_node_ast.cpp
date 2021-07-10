@@ -5,6 +5,7 @@
 #include <sstream>
 #include <util/base_type.h>
 #include <util/c_types.h>
+#include <util/message.h>
 
 /* An optimisation of the tuple flattening technique found in smt_tuple_sym.cpp,
  * where we separate out tuple elements into their own variables without any
@@ -65,7 +66,7 @@ tuple_node_smt_ast::ite(smt_convt *ctx, smt_astt cond, smt_astt falseop) const
 
   std::string name = ctx->mk_fresh_name("tuple_ite::") + ".";
   tuple_node_smt_ast *result_sym =
-    new tuple_node_smt_ast(flat, ctx, sort, name, _msg);
+    new tuple_node_smt_ast(flat, ctx, sort, name);
 
   const_cast<tuple_node_smt_ast *>(true_val)->make_free(ctx);
   const_cast<tuple_node_smt_ast *>(false_val)->make_free(ctx);
@@ -142,8 +143,7 @@ smt_astt tuple_node_smt_ast::update(
     "structure");
 
   std::string name = ctx->mk_fresh_name("tuple_update::") + ".";
-  tuple_node_smt_ast *result =
-    new tuple_node_smt_ast(flat, ctx, sort, name, _msg);
+  tuple_node_smt_ast *result = new tuple_node_smt_ast(flat, ctx, sort, name);
   result->elements = elements;
   result->make_free(ctx);
   result->elements[idx] = value;
@@ -155,7 +155,7 @@ smt_astt tuple_node_smt_ast::select(
   smt_convt *ctx [[gnu::unused]],
   const expr2tc &idx [[gnu::unused]]) const
 {
-  _log_error("Select operation applied to tuple");
+  log_error("Select operation applied to tuple");
   abort();
 }
 
@@ -176,4 +176,11 @@ smt_astt tuple_node_smt_ast::project(smt_convt *ctx, unsigned int idx) const
   assert(idx < data.members.size() && "Out-of-bounds tuple element accessed");
 #endif
   return elements[idx];
+}
+
+void tuple_node_smt_ast::dump() const
+{
+  log_debug("name", name);
+  for(auto const &e : elements)
+    e->dump();
 }

@@ -31,9 +31,8 @@ public:
     smt_tuple_node_flattener &f,
     smt_convt *ctx,
     smt_sortt s,
-    std::string _name,
-    const messaget &msg)
-    : smt_ast(ctx, s, msg), name(std::move(_name)), flat(f)
+    std::string _name)
+    : smt_ast(ctx, s), name(std::move(_name)), flat(f)
   {
   }
   ~tuple_node_smt_ast() override = default;
@@ -56,13 +55,7 @@ public:
   smt_astt select(smt_convt *ctx, const expr2tc &idx) const override;
   smt_astt project(smt_convt *ctx, unsigned int elem) const override;
 
-  void dump() const override
-  {
-    default_message msg;
-    log_debug(fmt::format("name {}", name));
-    for(auto const &e : elements)
-      e->dump();
-  }
+  void dump() const;
 
   void make_free(smt_convt *ctx);
   void pre_ite(smt_convt *ctx, smt_astt cond, smt_astt falseop);

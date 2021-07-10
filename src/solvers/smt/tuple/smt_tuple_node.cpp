@@ -5,6 +5,7 @@
 #include <sstream>
 #include <util/base_type.h>
 #include <util/c_types.h>
+#include <util/message.h>
 
 smt_astt smt_tuple_node_flattener::tuple_create(const expr2tc &structdef)
 {
@@ -15,7 +16,7 @@ smt_astt smt_tuple_node_flattener::tuple_create(const expr2tc &structdef)
   name += ".";
 
   tuple_node_smt_ast *result = new tuple_node_smt_ast(
-    *this, ctx, ctx->convert_sort(structdef->type), name, msg);
+    *this, ctx, ctx->convert_sort(structdef->type), name);
   result->elements.resize(structdef->get_num_sub_exprs());
 
   for(unsigned int i = 0; i < structdef->get_num_sub_exprs(); i++)
@@ -40,7 +41,7 @@ smt_astt smt_tuple_node_flattener::tuple_fresh(smt_sortt s, std::string name)
     return array_conv.mk_array_symbol(name, s, subtype);
   }
 
-  return new tuple_node_smt_ast(*this, ctx, s, name, msg);
+  return new tuple_node_smt_ast(*this, ctx, s, name);
 }
 
 smt_astt
@@ -62,7 +63,7 @@ smt_tuple_node_flattener::mk_tuple_symbol(const std::string &name, smt_sortt s)
     name2 += ".";
 
   assert(s->id != SMT_SORT_ARRAY);
-  return new tuple_node_smt_ast(*this, ctx, s, name2, msg);
+  return new tuple_node_smt_ast(*this, ctx, s, name2);
 }
 
 smt_astt smt_tuple_node_flattener::mk_tuple_array_symbol(const expr2tc &expr)
@@ -183,7 +184,7 @@ expr2tc smt_tuple_node_flattener::tuple_get_rec(tuple_node_smt_astt tuple)
           "sorry");
         abort();
       }
-      msg.warning(
+      log_warning(
         "Fetching array elements inside tuples currently unimplemented, "
         "returning empty expression...");
       res = expr2tc();
