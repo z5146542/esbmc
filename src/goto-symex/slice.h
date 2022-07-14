@@ -13,13 +13,16 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <goto-symex/symex_target_equation.h>
 #include <unordered_set>
 
-BigInt slice(std::shared_ptr<symex_target_equationt> &eq, bool slice_assume);
+BigInt slice(
+  std::shared_ptr<symex_target_equationt> &eq,
+  bool slice_assume,
+  std::function<bool(const symbol2t &)> no_slice);
 BigInt simple_slice(std::shared_ptr<symex_target_equationt> &eq);
 
 class symex_slicet
 {
 public:
-  symex_slicet(bool assume);
+  symex_slicet(bool assume, std::function<bool(const symbol2t &)> no_slice);
   void slice(std::shared_ptr<symex_target_equationt> &eq);
 
   typedef std::unordered_set<std::string> symbol_sett;
@@ -29,6 +32,7 @@ public:
 protected:
   bool slice_assumes;
   std::function<bool(const symbol2t &)> add_to_deps;
+  std::function<bool(const symbol2t &)> no_slice;
 
   template <bool Add>
   bool get_symbols(const expr2tc &expr);
