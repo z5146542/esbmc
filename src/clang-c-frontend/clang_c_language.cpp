@@ -306,6 +306,7 @@ signed __ESBMC_POINTER_OFFSET(const void *);
 
 // malloc
 __attribute__((annotate("__ESBMC_inf_size")))
+__attribute__((annotate("__ESBMC_no_slice")))
 _Bool __ESBMC_alloc[1];
 
 __attribute__((annotate("__ESBMC_inf_size")))
