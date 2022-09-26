@@ -1,11 +1,3 @@
-/*******************************************************************\
-
-Module: Internal Representation
-
-Author: Daniel Kroening, kroening@kroening.com
-
-\*******************************************************************/
-
 #include <cassert>
 #include <cstdlib>
 #include <util/i2string.h>
@@ -470,6 +462,39 @@ std::string irept::pretty(unsigned indent) const
     result += it->pretty(indent + 2);
   }
 
+  return result;
+}
+
+std::string irept::get_args(bool first) const
+{
+  std::string result;
+
+  forall_named_irep(it, get_named_sub())
+  {
+    result += it->second.get_args(first);
+  }
+
+  forall_named_irep(it, get_comments())
+  {
+    std::string field;
+#ifdef USE_DSTRING
+    field += it->first.as_string();
+#else
+    field += it_first;
+#endif
+    if(field.find("#base_name") != std::string::npos) {
+      if(!first)
+        result += ", ";
+      result += it->second.pretty(0);
+    }
+  }
+
+  forall_irep(it, get_sub())
+  {
+    result += it->get_args(first);
+    first = false;
+  }
+  
   return result;
 }
 

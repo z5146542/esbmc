@@ -1,11 +1,3 @@
-/*******************************************************************\
-
-Module:
-
-Author: Daniel Kroening, kroening@kroening.com
-
-\*******************************************************************/
-
 #include <clang-c-frontend/expr2c.h>
 #include <util/arith_tools.h>
 #include <util/c_misc.h>
@@ -17,6 +9,127 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/prefix.h>
 #include <util/std_code.h>
 #include <util/std_types.h>
+
+unsigned int cnt = 0;
+
+std::string get_last_tmp(const std::string lines) {
+  // step 1: get the last line
+  std::string delim1 = "\n        ";
+  size_t last = 0;
+  size_t next = 0;
+  
+  while((next = lines.find(delim1, last)) != std::string::npos)
+    last = next + delim1.length();
+  std::string line = lines.substr(last);
+
+  // step 2: get the lhs of the last line
+  std::string delim2 = " := ";
+  std::string token = line.substr(0, line.find(delim2));
+  return token;
+}
+
+std::string cap_no_cast_get_var(const std::string lines) {
+  std::string ret;
+  // step 1: find the first occurrence of "i__load"
+  std::string delim = " := \"i__load\"(";
+  size_t start = lines.find(delim);
+  if(start == std::string::npos) return "";
+  start += delim.size();
+  size_t end = lines.find(", ", start);
+  return lines.substr(start, end - start);
+}
+
+/** 
+ * The following helper functions extract the typ and var field,
+ * provided a sequences of `tmp_n := "i__unops_cast(typ, var)"`
+ */
+std::string cap_cast_get_typ(const std::string lines) {
+  std::string ret;
+  // step 1: find the last occurrence of "i__unops_cast"
+  // start denotes the first position of the type. 
+  std::string delim = " := \"i__unops_cast\"(\"";
+  size_t start = lines.rfind(delim);
+  if(start == std::string::npos)
+    return ret;
+  start += delim.size();
+  // end denotes the last position of the type.
+  size_t end = lines.find("\"", start);
+  return lines.substr(start, end - start);
+}
+
+/**
+ * Dereference the argument to something the memory model can understand
+ *
+ */
+std::string deref_cap_typ_store(const std::string typ) {
+  if(std::count(typ.begin(), typ.end(), '*') > 1)
+    return "cap";
+  else if (typ.find("unsigned char *") != std::string::npos)
+    return "uint8";
+  else if (typ.find("signed char *") != std::string::npos)
+    return "int8";
+  else if (typ.find("unsigned short int *") != std::string::npos)
+    return "uint16";
+  else if (typ.find("signed short int *") != std::string::npos)
+    return "int16";
+  else if (typ.find("unsigned int *") != std::string::npos)
+    return "uint32";
+  else if (typ.find("signed int *") != std::string::npos)
+    return "int32";
+  else if (typ.find("unsigned long int *") != std::string::npos)
+    return "uint64";
+  else if (typ.find("signed long int *") != std::string::npos)
+    return "int64";
+  return "undef";
+}
+
+std::string cap_cast_get_var(const std::string lines) {
+  std::string ret;
+  std::string delim = " := \"i__unops_cast\"(\"";
+  // instead of rfind, we do find.
+  // If there are multiple casts, we lost the variable.
+  // Thus, we must find the first occurrence for the variable.
+  size_t start1 = lines.find(delim);
+  if(start1 == std::string::npos)
+    return ret;
+  start1 += delim.size();
+  delim = "\", ";
+  size_t start = lines.find(delim, start1) + delim.size();
+  size_t end = lines.find(");", start);
+  return lines.substr(start, end - start);
+}
+/**
+ * Because ESBMC does not do any calculations with pointer arithmetic,
+ * we build our own sizeof, which we will use to obtain the correct
+ * offset that needs to be multiplied before adding
+ */
+std::string get_sizeof(const std::string type_info) {
+    // there are (roughly) three cases:
+    // 1. pointer subtype is pointer: width is 256. return 32
+    // 2. pointer subtype is (un)signedbv: use width field / 8.
+    // 3. pointer subtype is symbol: TODO
+    std::string delim = "subtype: ";
+    size_t start = type_info.find(delim);
+    if(start != std::string::npos) return "";
+    start += delim.length();
+    size_t end = type_info.find("\n", start);
+    std::string subtyp = type_info.substr(start, end - start);
+    if(subtyp.find("pointer") != std::string::npos) return "32";
+    if(subtyp.find("signedbv") != std::string::npos) {
+        delim = "width: ";
+        start = type_info.find(delim);
+        start += delim.length();
+        size_t end = type_info.find("\n", start);
+        std::string siz = type_info.substr(start, end - start);
+        if(siz.find("8") != std::string::npos) return "1";
+        if(siz.find("16") != std::string::npos) return "2";
+        if(siz.find("32") != std::string::npos) return "4";
+        if(siz.find("64") != std::string::npos) return "8";
+        return 0;
+    }
+    if(subtyp.find("symbol") != std::string::npos);
+    return "";
+}
 
 std::string expr2ct::id_shorthand(const exprt &expr) const
 {
@@ -264,7 +377,7 @@ std::string expr2ct::convert_rec(
 
     std::string dest = convert(return_type) + " ";
 
-    dest += "(";
+    dest += "( ";
     const irept &arguments = src.arguments();
 
     forall_irep(it, arguments.get_sub())
@@ -277,7 +390,7 @@ std::string expr2ct::convert_rec(
       dest += convert(argument_type);
     }
 
-    dest += ")";
+    dest += " )";
     return dest;
   }
 
@@ -302,7 +415,9 @@ std::string expr2ct::convert_typecast(const exprt &src, unsigned &precedence)
     src.op0().is_zero())
     return "0";
 
-  std::string dest;
+  std::string tmp = convert(src.op0(), precedence);
+  std::string token = get_last_tmp(tmp);
+  std::string dest = tmp.find(" := ") != std::string::npos ? tmp + "\n        " : "";
   if(type.id() == "struct")
   {
     std::string dest;
@@ -319,17 +434,21 @@ std::string expr2ct::convert_typecast(const exprt &src, unsigned &precedence)
     dest += " " + tag;
   }
   else
-    dest = "(" + convert(type) + ")";
+  {
+    // dest = "(" + convert(type) + ")";
+    dest += "tmp_" + std::to_string(cnt++) + " := \"i__unops_cast\"(\"" + convert(type) + "\", " + token + ");";
 
+  }
+  /*
   std::string tmp = convert(src.op0(), precedence);
-
+  
   if(
     src.op0().id() == "member" || src.op0().id() == "constant" ||
     src.op0().id() == "symbol") // better fix precedence
     dest += tmp;
   else
     dest += '(' + tmp + ')';
-
+  */
   return dest;
 }
 
@@ -571,27 +690,65 @@ std::string expr2ct::convert_binary(
   std::string dest;
   bool first = true;
 
+  std::string lhs = "";
+  std::string rhs = "";
+
   forall_operands(it, src)
   {
-    if(first)
+    unsigned p;
+    std::string op = convert(*it, p);
+    if(first) {
       first = false;
+      lhs = op;
+    }
     else
     {
+      rhs = op;
+      /*
       if(symbol != ", ")
         dest += ' ';
       dest += symbol;
       dest += ' ';
+      */
     }
 
-    unsigned p;
-    std::string op = convert(*it, p);
-
+    // unsigned p;
+    // std::string op = convert(*it, p);
+    /*
     if(precedence > p || (precedence == p && full_parentheses))
       dest += '(';
     dest += op;
     if(precedence > p || (precedence == p && full_parentheses))
       dest += ')';
+     */
   }
+  // dest += op != "" ? "" : op + "\n        ";
+  std::string arg1;
+  std::string arg2;
+  if(lhs.find(" := ") != std::string::npos) {
+    arg1 = get_last_tmp(lhs);
+    dest += lhs + "\n        ";
+  } else
+    arg1 = lhs;
+
+  if(rhs.find(" := ") != std::string::npos) {
+    arg2 = get_last_tmp(rhs);
+    dest += rhs + "\n        ";
+  } else
+    arg2 = rhs;
+
+  std::string op_str;
+  if(symbol == "<")
+    op_str = "i__binops_cmp_lt";
+  else if (symbol == "+")
+    op_str = "i__binops_add";
+  else if (symbol == "*")
+    op_str = "i__binops_mul";
+  else if (symbol == "==")
+    op_str = "i__binops_cmp_eq";
+  else
+    op_str = "i__undefined_" + symbol;
+  dest += "tmp_" + std::to_string(cnt++) + " := \"" + op_str + "\"(" + arg1 + ", " + arg2 + ");";
 
   return dest;
 }
@@ -606,14 +763,46 @@ std::string expr2ct::convert_unary(
 
   unsigned p;
   std::string op = convert(src.op0(), p);
-
+  /*
   std::string dest = symbol;
   if(precedence >= p)
     dest += '(';
   dest += op;
   if(precedence >= p)
     dest += ')';
+  */
+  std::string dest; // = op + "\n        ";
+  // step 1: get the last line
+  std::string lines = op;
+  std::string token = get_last_tmp(lines);
+  if(lines.find(" := ") != std::string::npos) {
+    dest += op + "\n        ";
+  }
+  std::string op_str;
+  // add on a case_by_case basis
+  if(symbol == "!")
+    op_str = "i__unops_negb";
+  else if (symbol == "*")
+    op_str = "i__load";
+  else
+    op_str = "i__undefined_" + symbol;
 
+  // the "i__load" case is a bit complicated.
+  // we first note that pointer casting has no value.
+  // we use the same helper functions used for "i__store" to obtain
+  // the original variables and type.
+  // the uncasted case is a more complicated.
+  if(op_str == "i__load") {
+    // if (lines.find(" := ") != std::string::npos) {
+    if (lines.find(" := \"i__unops_cast\"(") != std::string::npos) {
+      token = cap_cast_get_var(lines) + ", \"" + deref_cap_typ_store(cap_cast_get_typ(lines)) + "\"";
+    } else {
+      token += ", \"" + deref_cap_typ_store(convert_rec(src.op0().type(), c_qualifierst(), op)) + "\"";
+      //? token += ", ";
+    }
+  }
+  dest += "tmp_" + std::to_string(cnt++) + " := \"" + op_str + "\"(" + token + ");";
+  // dest += " (* " + src.op0().type().subtype().pretty(0) + " *)";
   return dest;
 }
 
@@ -680,13 +869,24 @@ std::string expr2ct::convert_malloc(const exprt &src, unsigned &precedence)
 
   unsigned p0;
   std::string op0 = convert(src.op0(), p0);
-
-  std::string dest = "MALLOC";
+  // change: malloc only takes in the size
+  std::string dest;
+  // step 1: get the last line
+  std::string lines = op0;
+  std::string token = get_last_tmp(lines);
+  // step 2: if there are previous assignments, append the assignments beforehand
+  if(lines.find(" := ") != std::string::npos) {
+    dest += lines;
+    dest += "\n        ";
+  }
+  dest += "tmp_" + std::to_string(cnt++) + " := \"i__malloc\"";
   dest += '(';
+  /*
   dest += convert((const typet &)src.cmt_type());
   dest += ", ";
-  dest += op0;
-  dest += ')';
+  */
+  dest += token;
+  dest += ");";
 
   return dest;
 }
@@ -912,6 +1112,8 @@ std::string expr2ct::convert_norep(const exprt &src, unsigned &)
 std::string expr2ct::convert_symbol(const exprt &src, unsigned &)
 {
   const irep_idt &id = src.identifier();
+  // previously, we made changes here to check whether a var is global or not
+  // const symbolt *symbol = ns.lookup(id);
   std::string dest;
 
   if(!fullname && ns_collision.find(id) == ns_collision.end())
@@ -1018,8 +1220,18 @@ std::string expr2ct::convert_constant(const exprt &src, unsigned &precedence)
   }
   else if(type.id() == "unsignedbv" || type.id() == "signedbv")
   {
+    std::string typ = type.id() == "unsignedbv" ? "uint" : "int";
+    // TODO: HERE, WE ADD TYPE INFORMATION
+    // (un)signedbv determines signedness
+    // width determines size
+    // - width = 8 ==> char
+    // - width = 16 ==> short
+    // - width = 32 ==> int
+    // - width = 64 ==> long
+    std::string siz = type.pretty(0).substr(type.pretty(0).find("width: ") + 7);
+    typ += siz;
     BigInt int_value = binary2integer(value, type.id() == "signedbv");
-    dest = integer2string(int_value);
+    dest = "{{ \"" + typ + "\", " + integer2string(int_value) + "i }}";
   }
   else if(type.id() == "floatbv")
   {
@@ -1047,7 +1259,7 @@ std::string expr2ct::convert_constant(const exprt &src, unsigned &precedence)
   }
   else if(type.is_array() || type.id() == "incomplete_array")
   {
-    dest = "{ ";
+    dest = "{{ ";
 
     forall_operands(it, src)
     {
@@ -1063,7 +1275,7 @@ std::string expr2ct::convert_constant(const exprt &src, unsigned &precedence)
       dest += tmp;
     }
 
-    dest += " }";
+    dest += " }}";
   }
   else if(type.id() == "pointer")
   {
@@ -1523,7 +1735,9 @@ std::string expr2ct::convert_code_dead(const codet &src, unsigned indent)
     return convert_norep(src, precedence);
   }
 
-  return indent_str(indent) + "dead " + convert(src.op0()) + ";";
+  // return indent_str(indent) + "dead " + convert(src.op0()) + ";";
+  // No one is dying today.
+  return "skip;";
 }
 
 std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
@@ -1537,8 +1751,9 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
   std::string declarator = convert(src.op0());
 
   std::string dest = indent_str(indent);
-
+  std::string finaldest = indent_str(indent);
   const symbolt *symbol = NULL;
+
   if(!ns.lookup(to_symbol_expr(src.op0()).get_identifier(), symbol))
   {
     if(
@@ -1568,6 +1783,7 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
     dest += declarator;
   }
   else
+    // TODO: use the following when type information is needed
     dest += convert_rec(src.op0().type(), c_qualifierst(), declarator);
 
   if(src.operands().size() == 2)
@@ -1575,7 +1791,9 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
 
   dest += ';';
 
-  return dest;
+  finaldest += declarator + " := undefined; (* " + dest + " *)";
+
+  return finaldest;
 }
 
 std::string expr2ct::convert_code_for(const codet &src, unsigned indent)
@@ -1747,6 +1965,7 @@ std::string expr2ct::convert_code(const codet &src, unsigned indent)
   return convert_norep(src, precedence);
 }
 
+// TODO: separate src.op1(), assign separately, then assign thereafter
 std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
 {
   // Union remangle: If the right hand side is a constant array, containing
@@ -1755,12 +1974,67 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
   // In that case, replace with a special intrinsic indicating to the user that
   // the original code is now meaningless.
   unsigned int precedent = 15;
+  /*
   std::string tmp = convert(src.op0(), precedent);
   tmp += "=";
   tmp += convert(src.op1(), precedent);
+  */
+  std::string dest_t;
 
-  std::string dest = indent_str(indent) + tmp + ";";
 
+  // In this part, we make an attempt to read whether we have
+  // "\"i__load\"(". If this is the case, we are performing a store.
+  // We only print the RHS, then perform a "i__store" instead, giving the last
+  // tmp as the value argument.
+  // Note that store technically does not return, so we a generic tmp is used.
+  std::string tmp2 = convert(src.op0(), precedent);
+  std::string token2 = get_last_tmp(tmp2);
+  bool is_store = false;
+  bool is_casted_store = false;
+  size_t start = tmp2.find(" := \"i__load");
+  if(start != std::string::npos) {
+    // issue 1:
+    //   because pointer offset may apply, we need to print that line, but NOT print
+    //   the load line. 
+    // issue 2:
+    //   pointer addition offset does not take into account sizeof.
+    //   May need to infer sizeof manually... 
+    //dest_t += tmp2;
+    size_t end = tmp2.find(";", start) + 1;
+    start = tmp2.substr(0, start).rfind("tmp_");
+    std::string tmp2_exc = tmp2;
+    tmp2_exc.erase(start, end-start);
+    
+    dest_t += tmp2_exc;
+    dest_t += "\n        ";
+    is_store = true;
+    if(tmp2.find(" := \"i__unops_cast") != std::string::npos)
+      is_casted_store = true;
+  } else if (tmp2.find(" := ") != std::string::npos) {
+    dest_t += tmp2;
+    dest_t += "\n        ";
+  }
+
+  std::string tmp = convert(src.op1(), precedent);
+  std::string token = get_last_tmp(tmp);
+  if(tmp.find(" := ") != std::string::npos) {
+    dest_t += tmp;
+    dest_t += "\n        ";
+  }
+  if (!is_store)
+    dest_t += token2 + " := " + token;
+  else {
+    // two cases
+    // case 1: casted pointer
+    // case 2: direct variable
+    if (is_casted_store) {
+      dest_t += "tmp := \"i__store\"(" + cap_cast_get_var(tmp2) + ", " + token + ")";
+    } else {
+      dest_t += "tmp := \"i__store\"(" + cap_no_cast_get_var(tmp2)  + ", " + token + ")";
+    }
+  }
+
+  std::string dest = indent_str(indent) + dest_t + ";";
   return dest;
 }
 
@@ -1772,7 +2046,20 @@ std::string expr2ct::convert_code_free(const codet &src, unsigned indent)
     return convert_norep(src, precedence);
   }
 
-  return indent_str(indent) + "FREE(" + convert(src.op0()) + ");";
+  std::string dest_t;
+  std::string tmp = convert(src.op0());
+  // std::string token = get_last_tmp(tmp);
+  std::string var = cap_cast_get_var(tmp);
+  /*
+  if(tmp.find(" := ") != std::string::npos) {
+    dest_t += tmp;
+    dest_t += "\n        ";
+  }
+  */
+
+  return dest_t + var + " := \"i__free\"(" + var + ");";
+
+  // return indent_str(indent) + convert(src.op0()) + " := \"i__free\"(" + convert(src.op0()) + ");";
 }
 
 std::string expr2ct::convert_code_init(const codet &src, unsigned indent)
@@ -1822,8 +2109,13 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
 
     // TODO: [add] brackets, if necessary, depending on p
     dest += lhs_str;
-    dest += "=";
+    dest += " := ";
+  } else {
+    // here, we simply assign a dummy variable
+    dest += "tmp := ";
   }
+
+  dest += "\"";
 
   {
     unsigned p;
@@ -1831,7 +2123,7 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
     dest += function_str;
   }
 
-  dest += "(";
+  dest += "\"(";
 
   unsigned i = 0;
 
@@ -2065,7 +2357,7 @@ std::string expr2ct::convert(const exprt &src, unsigned &precedence)
 
   else if(src.id() == "NULL-object")
   {
-    return "0";
+    return "0"; // replace with GIL NULL capability definition.
   }
 
   else if(src.id() == "infinity")

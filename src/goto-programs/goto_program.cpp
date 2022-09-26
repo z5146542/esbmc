@@ -1,15 +1,23 @@
-/*******************************************************************\
-
-Module: Program Transformation
-
-Author: Daniel Kroening, kroening@kroening.com
-
-\*******************************************************************/
-
 #include <goto-programs/goto_program.h>
 #include <iomanip>
 #include <langapi/language_util.h>
 #include <util/message/default_message.h>
+
+std::string get_last_tmp2(const std::string lines) {
+  // step 1: get the last line
+  std::string delim1 = "\n        ";
+  size_t last = 0;
+  size_t next = 0;
+  
+  while((next = lines.find(delim1, last)) != std::string::npos)
+    last = next + delim1.length();
+  std::string line = lines.substr(last);
+
+  // step 2: get the lhs of the last line
+  std::string delim2 = " := ";
+  std::string token = line.substr(0, line.find(delim2));
+  return token;
+}
 
 void goto_programt::instructiont::dump() const
 {
@@ -26,31 +34,32 @@ void goto_programt::instructiont::output_instruction(
   const messaget &msg,
   bool show_location) const
 {
+  show_location = false;
   if(show_location)
   {
-    out << "        // " << location_number << " ";
+    out << "        (* " << location_number << " ";
 
     if(!location.is_nil())
       out << location.as_string();
     else
       out << "no location";
 
-    out << "\n";
+    out << " *)\n";
   }
 
   if(!labels.empty())
   {
-    out << "        // Labels:";
+    out << "        (* Labels:";
     for(const auto &label : labels)
     {
       out << " " << label;
     }
 
-    out << "\n";
+    out << "*) \n";
   }
 
   if(is_target())
-    out << std::setw(6) << target_number << ": ";
+    out << std::setw(5) << "t" << target_number << ": ";
   else
     out << "        ";
 
@@ -64,35 +73,65 @@ void goto_programt::instructiont::output_instruction(
   case GOTO:
     if(!is_true(guard))
     {
-      out << "IF " << from_expr(ns, identifier, guard, msg) << " THEN ";
+      std::string lines = from_expr(ns, identifier, guard, msg);
+      std::string token = get_last_tmp2(lines);
+      out << lines << "\n";
+      out << "        " << "vtb := \"i__bool_of_value\"(" << token << ");\n";
+      out << "        " << "goto [vtb] ";
     }
-
-    out << "GOTO ";
-
+    else {
+      out << "goto ";
+    }
+    
     for(instructiont::targetst::const_iterator gt_it = targets.begin();
         gt_it != targets.end();
         gt_it++)
     {
       if(gt_it != targets.begin())
         out << ", ";
-      out << (*gt_it)->target_number;
+      out << "t" <<(*gt_it)->target_number;
+      if(!is_true(guard)) {
+        out << " ";
+        out << "s" << (*gt_it)->target_number;
+        out << ";\n";
+        out << std::setw(5) << "s" << (*gt_it)->target_number << ": ";
+        out << "skip;";
+      }
+      else {
+        out << ";";
+      }
     }
 
     out << "\n";
     break;
 
   case FUNCTION_CALL:
-    out << "FUNCTION_CALL:  " << from_expr(ns, "", migrate_expr_back(code), msg)
-        << "\n";
+  {
+    std::string output = from_expr(ns, "", migrate_expr_back(code), msg);
+    if(output.find("\"pthread_start_main_hook\"(") != std::string::npos
+    || output.find("\"pthread_end_main_hook\"(") != std::string::npos
+    || output.find("\"main\"(") != std::string::npos) {
+      out << "skip;" << "\n";
+      break;
+    }
+    out << output << ";\n";
     break;
-
+  }
   case RETURN:
   {
     std::string arg;
     const code_return2t &ref = to_code_return2t(code);
     if(!is_nil_expr(ref.operand))
       arg = from_expr(ns, "", ref.operand, msg);
-    out << "RETURN: " << arg << "\n";
+    if(arg.find(" := ") != std::string::npos) {
+      std::string token = get_last_tmp2(arg);
+      out << arg << "\n";
+      out << "        ";
+      out << "ret := " << token << ";\n";
+    } else {
+      out << "ret := " << arg << ";\n";
+    }
+      out << "        " << "return;\n";
   }
   break;
 
@@ -100,11 +139,19 @@ void goto_programt::instructiont::output_instruction(
   case DEAD:
   case OTHER:
   case ASSIGN:
-    out << from_expr(ns, identifier, code, msg) << "\n";
+  {
+    std::string output = from_expr(ns, identifier, code, msg);
+    if(output.find("__ESBMC") != std::string::npos) {
+      out << "skip;" << "\n";
+      break;
+    }
+    out << output << "\n";
     break;
-
+  }
   case ASSUME:
   case ASSERT:
+    out << "skip;" << "\n";
+    break;
     if(is_assume())
       out << "ASSUME ";
     else
@@ -115,23 +162,29 @@ void goto_programt::instructiont::output_instruction(
 
       const irep_idt &comment = location.comment();
       if(comment != "")
-        out << " // " << comment;
+        out << " (* " << comment << " *)";
     }
 
     out << "\n";
     break;
 
   case SKIP:
-    out << "SKIP"
+    out << "skip;"
         << "\n";
     break;
 
   case END_FUNCTION:
-    out << "END_FUNCTION";
     {
+      const symbolt *symbol = NULL;
+      ns.lookup(identifier, symbol);
+      if(from_type(ns, symbol->id, symbol->type, msg).find("void") != std::string::npos)
+        out << "ret := undefined;" << "\n        ";
+    }
+    out << "return\n};";
+    if(show_location) {
       const irep_idt &function = location.function();
       if(function != "")
-        out << " // " << function;
+        out << " (* " << function << " *)";
     }
     out << "\n";
     break;

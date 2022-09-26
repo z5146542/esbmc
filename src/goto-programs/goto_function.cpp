@@ -1,14 +1,7 @@
-/*******************************************************************\
-
-Module: Program Transformation
-
-Author: Daniel Kroening, kroening@kroening.com
-
-\*******************************************************************/
-
 #include <cassert>
 #include <goto-programs/goto_convert_class.h>
 #include <goto-programs/goto_functions.h>
+#include <langapi/language_util.h>
 #include <util/c_types.h>
 #include <util/cprover_prefix.h>
 #include <util/expr_util.h>
@@ -187,14 +180,31 @@ void goto_functionst::output(const namespacet &ns, std::ostream &out) const
   {
     if(it.second.body_available)
     {
-      out << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-          << "\n";
+      const symbolt *symbol = NULL;
+      ns.lookup(it.first, symbol);
+      assert(symbol);
+      if(symbol->name.as_string().find("__ESBMC_main") != std::string::npos) {
+        out << "\n"
+            << "(* global-environment-setup *)\n"
+            << "proc genv_init() {\n";
+        it.second.body.output(ns,symbol->id, out);
+        continue;
+      }
+      if(symbol->name.as_string().find("__ESBMC") != std::string::npos
+      || symbol->name.as_string().find("pthread") != std::string::npos) continue;
       out << "\n";
-
-      const symbolt &symbol = ns.lookup(it.first);
-      out << symbol.name << " (" << symbol.id << "):"
-          << "\n";
-      it.second.body.output(ns, symbol.id, out);
+      
+      if(true)
+      {
+        default_message msg;
+        out << "(* " << from_type(ns, symbol->id, symbol->type, msg) << " *)\n";
+      }
+      out << "proc "
+          << symbol->name
+          << "("/* << from_type(ns, symbol-<id, symbol->type)*/
+          << symbol->type.get_args(true) << ") {";
+      out << "\n";
+      it.second.body.output(ns, symbol->id, out);
     }
   }
 }

@@ -1,11 +1,3 @@
-/*******************************************************************\
-
-Module:
-
-Author: Daniel Kroening, kroening@kroening.com
-
-\*******************************************************************/
-
 #ifndef CPROVER_IREP_H
 #define CPROVER_IREP_H
 
@@ -1203,6 +1195,7 @@ public:
   friend bool full_eq(const irept &a, const irept &b);
 
   std::string pretty(unsigned indent = 0) const;
+  std::string get_args(bool first) const;
 
 protected:
   static bool is_comment(const irep_namet &name)

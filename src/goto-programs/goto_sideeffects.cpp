@@ -1,11 +1,3 @@
-/*******************************************************************\
-
-Module: Program Transformation
-
-Author: Daniel Kroening, kroening@kroening.com
-
-\*******************************************************************/
-
 #include <goto-programs/goto_convert_class.h>
 #include <util/c_types.h>
 #include <util/cprover_prefix.h>
@@ -654,7 +646,7 @@ void goto_convertt::remove_function_call(
 
   symbolt new_symbol;
 
-  new_symbol.name = "return_value$";
+  new_symbol.name = "retval";
   new_symbol.type = expr.type();
   new_symbol.location = expr.location();
 
@@ -675,7 +667,7 @@ void goto_convertt::remove_function_call(
 
     new_base_name += '_';
     new_base_name += id2string(symbol.name);
-    new_base_name += "$" + std::to_string(++temporary_counter);
+    new_base_name += "_" + std::to_string(++temporary_counter);
 
     new_symbol.name = new_base_name;
     new_symbol.mode = symbol.mode;
