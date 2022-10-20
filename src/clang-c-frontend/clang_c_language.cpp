@@ -148,27 +148,38 @@ void clang_c_languaget::build_compiler_args(const std::string &tmp_dir)
     compiler_args.emplace_back(
       "-D__ESBMC_CHERI__=" + std::to_string(config.ansi_c.capability_width()));
     compiler_args.emplace_back(
-      "-D__builtin_cheri_length_get(p)=__esbmc_cheri_length_get(p)");
+      "-D__builtin_cheri_length_get(p)=i__cheri_length_get(p)");
     compiler_args.emplace_back(
-      "-D__builtin_cheri_bounds_set(p,n)=__esbmc_cheri_bounds_set(p,n)");
+      "-D__builtin_cheri_bounds_set(p,n)=i__cheri_bounds_set(p,n)");
 
     /* DEMO */
     compiler_args.emplace_back(
-      "-D__builtin_cheri_base_get(p)=__esbmc_cheri_base_get(p)");
+      "-D__builtin_cheri_base_get(p)=i__cheri_base_get(p)");
     compiler_args.emplace_back(
-      "-D__builtin_cheri_top_get(p)=__esbmc_cheri_top_get(p)");
+      "-D__builtin_cheri_top_get(p)=i__cheri_top_get(p)");
     compiler_args.emplace_back(
-      "-D__builtin_cheri_perms_get(p)=__esbmc_cheri_perms_get(p)");
+      "-D__builtin_cheri_perms_get(p)=i__cheri_perms_get(p)");
     compiler_args.emplace_back(
-      "-D__builtin_cheri_type_get(p)=__esbmc_cheri_type_get(p)");
+      "-D__builtin_cheri_type_get(p)=i__cheri_type_get(p)");
     compiler_args.emplace_back(
-      "-D__builtin_cheri_flags_get(p)=__esbmc_cheri_flags_get(p)");
+      "-D__builtin_cheri_flags_get(p)=i__cheri_flags_get(p)");
     compiler_args.emplace_back(
-      "-D__builtin_cheri_sealed_get(p)=__esbmc_cheri_sealed_get(p)");
+      "-D__builtin_cheri_sealed_get(p)=i__cheri_sealed_get(p)");
+    // gillian definitions
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_address_get(p)=i__cheri_address_get(p)");
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_offset_get(p)=i__cheri_offset_get(p)");
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_address_set(p,a)=i__cheri_address_set(p,a)");
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_bounds_set_exact(p,n)=i__cheri_bounds_set_exact(p,n)");
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_tag_clear(p)=i__cheri_tag_clear(p)");
 
     /* TODO: DEMO */
-    compiler_args.emplace_back("-D__builtin_cheri_tag_get(p)=1");
-    compiler_args.emplace_back("-D__builtin_clzll(n)=__esbmc_clzll(n)");
+    compiler_args.emplace_back("-D__builtin_cheri_tag_get(p)=i__cheri_tag_get(p)");
+    compiler_args.emplace_back("-D__builtin_clzll(n)=i__clzll(n)");
 
     switch(config.ansi_c.cheri)
     {
@@ -486,17 +497,23 @@ int __ESBMC_sync_fetch_and_add(int*, int);
   if(config.ansi_c.cheri)
   {
     intrinsics += R"(
-__SIZE_TYPE__ __esbmc_cheri_length_get(void *__capability);
-void *__capability __esbmc_cheri_bounds_set(void *__capability, __SIZE_TYPE__);
-__SIZE_TYPE__ __esbmc_cheri_base_get(void *__capability);
+__SIZE_TYPE__ i__cheri_length_get(void *__capability);
+void *__capability i__cheri_bounds_set(void *__capability, __SIZE_TYPE__);
+__SIZE_TYPE__ i__cheri_base_get(void *__capability);
+_Bool i__cheri_tag_get(void *__capability);
+__SIZE_TYPE__ i__cheri_address_get(void *__capability);
+__SIZE_TYPE__ i__cheri_offset_get(void *__capability);
+void *__capability i__cheri_address_set(void *__capability, __SIZE_TYPE__);
+void *__capability i__cheri_bounds_set_exact(void *__capability, __SIZE_TYPE__);
+void *__capability i__cheri_tag_clear(void *__capability);
 #if __ESBMC_CHERI__ == 128
-__UINT64_TYPE__ __esbmc_cheri_top_get(void *__capability);
-__SIZE_TYPE__ __esbmc_cheri_perms_get(void *__capability);
-__UINT16_TYPE__ __esbmc_cheri_flags_get(void *__capability);
-__UINT32_TYPE__ __esbmc_cheri_type_get(void *__capability);
-_Bool __esbmc_cheri_sealed_get(void *__capability);
+__UINT64_TYPE__ i__cheri_top_get(void *__capability);
+__SIZE_TYPE__ i__cheri_perms_get(void *__capability);
+__UINT16_TYPE__ i__cheri_flags_get(void *__capability);
+__UINT32_TYPE__ i__cheri_type_get(void *__capability);
+_Bool i__cheri_sealed_get(void *__capability);
 #endif
-__UINT64_TYPE__ __esbmc_clzll(__UINT64_TYPE__);
+__UINT64_TYPE__ i__clzll(__UINT64_TYPE__);
     )";
   }
 

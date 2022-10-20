@@ -145,27 +145,44 @@ void goto_programt::instructiont::output_instruction(
       out << "skip;" << "\n";
       break;
     }
+    // If an assignment does not have " := ", this means this
+    // is a nop operation. Semantically, this is equivalent to skip.
+    if(output.find(" := ") == std::string::npos) {
+      out << "skip;" << "\n";
+      break;
+    }
     out << output << "\n";
     break;
   }
   case ASSUME:
   case ASSERT:
-    out << "skip;" << "\n";
-    break;
-    if(is_assume())
-      out << "ASSUME ";
-    else
-      out << "ASSERT ";
-
+    // out << "skip;" << "\n";
+    // break;
     {
-      out << from_expr(ns, identifier, guard, msg);
+      std::string dest_t;
+      if(is_assume())
+        dest_t = "assume (";
+      else
+        dest_t = "assert (";
 
-      const irep_idt &comment = location.comment();
-      if(comment != "")
-        out << " (* " << comment << " *)";
+    
+      std::string arg = from_expr(ns, identifier, guard, msg);
+      if(arg.find(" := ") != std::string::npos) {
+        std::string token = get_last_tmp2(arg);
+        out << arg
+            << "\n        ";
+        dest_t += token;
+      } else
+        dest_t += arg;
+
+      // const irep_idt &comment = location.comment();
+      // if(comment != "")
+      //   out << " (* " << comment << " *)";
+    
+
+      dest_t += " == {{ \"int32\", 1i }});\n";
+      out << dest_t;
     }
-
-    out << "\n";
     break;
 
   case SKIP:

@@ -187,7 +187,7 @@ void goto_functionst::output(const namespacet &ns, std::ostream &out) const
         out << "\n"
             << "(* global-environment-setup *)\n"
             << "proc genv_init() {\n";
-        it.second.body.output(ns,symbol->id, out);
+        it.second.body.output(ns, symbol->id, out);
         continue;
       }
       if(symbol->name.as_string().find("__ESBMC") != std::string::npos
