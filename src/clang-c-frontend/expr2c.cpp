@@ -13,6 +13,7 @@
 #include <util/mp_arith.h>
 
 unsigned int cnt = 0;
+unsigned int lvar_cnt = 0;
 namespacet *nst;
 
 std::string get_last_tmp(const std::string lines) {
@@ -925,8 +926,46 @@ std::string expr2ct::convert_nondet(const exprt &src, unsigned &precedence)
 {
   if(src.operands().size() != 0)
     return convert_norep(src, precedence);
+  /* NOTE: depending on the type, we need to print the following: for a = nondet_Typ();
+   *   stmp_i := fresh_svar();
+   *   assume(stmp_i == {{ "typ", #lvar_j }}); (* where "typ" corresponds to the type of the variable as a string*)
+   *   assume_type (#lvar_j, Typ) (* where Typ is the GIL type *)
+   *   a := stmp_i;
+   * If necesssary, we may want to also add an assumption about the bounds.
+   * */
+  std::string typ = convert(src.type());
+  if(typ == "unsigned char") {
+    typ = "uint8";
+  } else if (typ == "signed char") {
+    typ = "int8";
+  } else if (typ == "unsigned short") {
+    typ = "uint16";
+  } else if (typ == "signed short") {
+    typ = "int16";
+  } else if (typ == "unsigned int") {
+    typ = "uint32";
+  } else if (typ == "signed int") {
+    typ = "int32";
+  } else if (typ == "unsigned long") {
+    typ = "uint64";
+  } else if (typ == "signed long") {
+    typ = "int64";
+  } else {
+    typ = typ;
+  }
+  std::string stmp_i = std::to_string(cnt++);
+  std::string lvar_j = std::to_string(lvar_cnt++);
+  std::string dest;
 
-  return "NONDET(" + convert(src.type()) + ")";
+  dest += "stmp_" + stmp_i + " := fresh_svar();";
+  dest += "\n        ";
+  dest += "assume(stmp_" + stmp_i + " == {{ \"" + typ + "\", #lvar_" + lvar_j + " }});";
+  dest += "\n        ";
+  dest += "assume_type (#lvar_" + lvar_j + ", Int);"; 
+  dest += "\n        ";
+  dest += "stmp_" + stmp_i + " := stmp_" + stmp_i + ";";
+  return dest;
+  // return "NONDET(" + convert(src.type()) + ")";
 }
 
 std::string
