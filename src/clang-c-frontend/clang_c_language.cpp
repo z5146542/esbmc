@@ -176,6 +176,12 @@ void clang_c_languaget::build_compiler_args(const std::string &tmp_dir)
       "-D__builtin_cheri_bounds_set_exact(p,n)=i__cheri_bounds_set_exact(p,n)");
     compiler_args.emplace_back(
       "-D__builtin_cheri_tag_clear(p)=i__cheri_tag_clear(p)");
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_round_representable_length(len)=i__cheri_representable_length(len)");
+    compiler_args.emplace_back(
+      "-D__builtin_cheri_representable_alignment_mask(len)=i__cheri_representable_alignment_mask(len)");
+    compiler_args.emplace_back(
+      "-D__builtin_align_up(p,a)=i__builtin_align_up(p,a)");
 
     /* TODO: DEMO */
     compiler_args.emplace_back("-D__builtin_cheri_tag_get(p)=i__cheri_tag_get(p)");
@@ -497,6 +503,9 @@ int __ESBMC_sync_fetch_and_add(int*, int);
   if(config.ansi_c.cheri)
   {
     intrinsics += R"(
+__SIZE_TYPE__ i__cheri_representable_length(__SIZE_TYPE__);
+__UINT64_TYPE__ i__cheri_representable_alignment_mask(__SIZE_TYPE__);
+void *__capability i__builtin_align_up(void *__capability, __SIZE_TYPE__);
 __SIZE_TYPE__ i__cheri_length_get(void *__capability);
 void *__capability i__cheri_bounds_set(void *__capability, __SIZE_TYPE__);
 __SIZE_TYPE__ i__cheri_base_get(void *__capability);
