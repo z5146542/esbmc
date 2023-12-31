@@ -1129,7 +1129,7 @@ std::string expr2ct::convert_member(const exprt &src, unsigned precedence)
     if(precedence > p)
       dest += ')';
 
-    dest += '.';
+    //dest += '.';
   }
 
   const typet &full_type = ns.follow(src.op0().type());
@@ -1150,7 +1150,7 @@ std::string expr2ct::convert_member(const exprt &src, unsigned precedence)
   if(comp_expr.is_nil())
     return convert_norep(src, precedence);
 
-  dest += comp_expr.pretty_name().as_string();
+  //dest += comp_expr.pretty_name().as_string();
 
   return dest;
 }
@@ -1865,8 +1865,19 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
     dest += "=" + convert(src.op1());
 
   dest += ';';
+  
+  //auto test = src.type().to_string();
 
-  finaldest += declarator + " := undefined; (* " + dest + " *)";
+  if (followed.id() == "struct") {
+    finaldest += declarator + " := {{ undefined";
+    size_t pos = followed.components().pretty(0).rfind("component");
+    int n = stoi(followed.components().pretty(0).substr(pos-3, 1));
+    for (int i = 1; i <= n; i++) finaldest += ", undefined";
+    finaldest += " }};";
+  }
+
+  else finaldest += declarator + " := undefined; (* " + dest + " *)";
+
 
   return finaldest;
 }
@@ -2062,6 +2073,43 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
   // We only print the RHS, then perform a "i__store" instead, giving the last
   // tmp as the value argument.
   // Note that store technically does not return, so we a generic tmp is used.
+  bool struct_set = src.op0().is_member();
+  bool struct_get = src.op1().is_member();
+
+  if (struct_set) { 
+    std::string f_name;
+    bool struct_store = src.op0().op0().is_dereference();
+    if (struct_store) f_name = "store";
+    else f_name = "set";
+    std::string instance_name = convert(src.op0()); 
+    if (struct_store) instance_name = instance_name.substr(0, instance_name.length()-2);
+    std::string set_to = convert(src.op1());
+    std::string component_name = src.op0().component_name().as_string();
+    const typet &full_type = ns.follow(src.op0().op0().type());
+    const struct_typet &struct_type = to_struct_type(full_type);
+    const irep_idt &tag = struct_type.tag().as_string();
+    std::string struct_name = id2string(tag).substr(7);
+    //dest_t = instance_name + " := \"" + struct_name + "_set_" + component_name + "\"(" + instance_name + ", " + set_to + ")";
+    dest_t = instance_name + " := \"" + struct_name + "_" + f_name + "_" + component_name + "\"(" + instance_name + ", " + set_to + ")";
+  }
+
+  else if (struct_get) {
+    std::string f_name;
+    bool struct_load = src.op1().op0().is_dereference();
+    if (struct_load) f_name = "_load_";
+    else f_name = "_get_";
+    std::string lhs = convert(src.op0());
+    const typet &full_type = ns.follow(src.op1().op0().type());
+    const struct_typet &struct_type = to_struct_type(full_type);
+    const irep_idt &tag = struct_type.tag().as_string();
+    std::string struct_name = id2string(tag).substr(7);
+    std::string component_name = src.op1().component_name().as_string();
+    std::string instance_name = convert(src.op1());
+    if (struct_load) instance_name = instance_name.substr(0, instance_name.length()-2);
+    dest_t = lhs + " := \"" + struct_name + f_name + component_name + "\"(" + instance_name + ")";
+  }
+
+  else {
   std::string tmp2 = convert(src.op0(), precedent);
   std::string token2 = get_last_tmp(tmp2);
   bool is_store = false;
@@ -2112,8 +2160,9 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
       dest_t += "tmp := \"i__store\"(" + cap_no_cast_get_var(tmp2)  + ", " + token + ")";
     }
   }
-
+  }
   std::string dest = indent_str(indent) + dest_t + ";";
+  //dest += src.pretty(0);
   return dest;
 }
 
