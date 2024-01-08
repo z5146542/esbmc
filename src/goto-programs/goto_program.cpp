@@ -140,14 +140,32 @@ void goto_programt::instructiont::output_instruction(
   case OTHER:
   case ASSIGN:
   {
+
     std::string output = from_expr(ns, identifier, code, msg);
     if(output.find("__ESBMC") != std::string::npos) {
       out << "skip;" << "\n";
       break;
     }
+
+    // If "i__storegv" is called within "genv_init", the variable must be initialised with "i__set_glob_var".
+    if (identifier.as_string().find("__ESBMC_main") != std::string::npos && output.find("store") != std::string::npos) {
+      std::string glovar_info = output.substr(output.find("i__storegv")+13);
+      std::string glovar_ident_string = glovar_info.substr(0,glovar_info.find("\""));
+      std::string glovar_size_string = glovar_info.substr(glovar_info.find("{{")+4);
+      glovar_size_string = glovar_size_string.substr(0, glovar_size_string.find("\""));
+      std::string size_bytes;
+      if (glovar_size_string=="uint8"||glovar_size_string=="int8") size_bytes = "1";
+      else if (glovar_size_string=="uint16"||glovar_size_string=="int16") size_bytes = "2";
+      else if (glovar_size_string=="uint32"||glovar_size_string=="int32") size_bytes = "4";
+      else if (glovar_size_string=="uint64"||glovar_size_string=="int64") size_bytes = "8";
+      else if (output.find("NULL") != std::string::npos) size_bytes = "32";
+      else throw("type not recognised");
+      out << "tmp := \"i__set_glob_var\"(\"" + glovar_ident_string + "\", " + size_bytes + "i);\n        ";
+    }
+
     // If an assignment does not have " := ", this means this
     // is a nop operation. Semantically, this is equivalent to skip.
-    if(output.find(" := ") == std::string::npos) {
+    if(output.find(" := ") == std::string::npos || output.find("NULL") != std::string::npos) {
       out << "skip;" << "\n";
       break;
     }

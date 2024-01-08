@@ -1183,9 +1183,29 @@ std::string expr2ct::convert_symbol(const exprt &src, unsigned &)
   const irep_idt &id = src.identifier();
   // previously, we made changes here to check whether a var is global or not
   // const symbolt *symbol = ns.lookup(id);
-  std::string dest;
+  std::string id_string = id.as_string();
+  bool is_global = std::count(id_string.begin(), id_string.end(), '@') == 1;
 
-  if(!fullname && ns_collision.find(id) == ns_collision.end())
+  std::string dest;
+  if (is_global) {
+    std::string typ = src.type().to_string();
+    if (src.type().id()=="pointer") typ = "cap";
+    else if(src.type().id() == "unsignedbv" || src.type().id() == "signedbv") {
+      typ = src.type().id() == "unsignedbv" ? "uint" : "int";
+      // TODO: HERE, WE ADD TYPE INFORMATION
+      // (un)signedbv determines signedness
+      // width determines size
+      // - width = 8 ==> char
+      // - width = 16 ==> short
+      // - width = 32 ==> int
+      // - width = 64 ==> long
+      std::string siz = src.type().to_string().substr(src.type().to_string().find("width: ") + 7);
+      typ += siz;
+    }
+    dest = id_shorthand(src) + " := \"i__loadgv\"(\"" + id_shorthand(src) + "\", \"" + typ + "\");";
+  }
+
+  else if(!fullname && ns_collision.find(id) == ns_collision.end())
     dest = id_shorthand(src);
   else
     dest = id2string(id);
@@ -2073,48 +2093,12 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
   // We only print the RHS, then perform a "i__store" instead, giving the last
   // tmp as the value argument.
   // Note that store technically does not return, so we a generic tmp is used.
-  bool struct_set = src.op0().is_member();
-  bool struct_get = src.op1().is_member();
 
-  if (struct_set) { 
-    std::string f_name;
-    bool struct_store = src.op0().op0().is_dereference();
-    if (struct_store) f_name = "store";
-    else f_name = "set";
-    std::string instance_name = convert(src.op0()); 
-    if (struct_store) instance_name = instance_name.substr(0, instance_name.length()-2);
-    std::string set_to = convert(src.op1());
-    std::string component_name = src.op0().component_name().as_string();
-    const typet &full_type = ns.follow(src.op0().op0().type());
-    const struct_typet &struct_type = to_struct_type(full_type);
-    const irep_idt &tag = struct_type.tag().as_string();
-    std::string struct_name = id2string(tag).substr(7);
-    //dest_t = instance_name + " := \"" + struct_name + "_set_" + component_name + "\"(" + instance_name + ", " + set_to + ")";
-    dest_t = instance_name + " := \"" + struct_name + "_" + f_name + "_" + component_name + "\"(" + instance_name + ", " + set_to + ")";
-  }
-
-  else if (struct_get) {
-    std::string f_name;
-    bool struct_load = src.op1().op0().is_dereference();
-    if (struct_load) f_name = "_load_";
-    else f_name = "_get_";
-    std::string lhs = convert(src.op0());
-    const typet &full_type = ns.follow(src.op1().op0().type());
-    const struct_typet &struct_type = to_struct_type(full_type);
-    const irep_idt &tag = struct_type.tag().as_string();
-    std::string struct_name = id2string(tag).substr(7);
-    std::string component_name = src.op1().component_name().as_string();
-    std::string instance_name = convert(src.op1());
-    if (struct_load) instance_name = instance_name.substr(0, instance_name.length()-2);
-    dest_t = lhs + " := \"" + struct_name + f_name + component_name + "\"(" + instance_name + ")";
-  }
-
-  else {
   std::string tmp2 = convert(src.op0(), precedent);
   std::string token2 = get_last_tmp(tmp2);
   bool is_store = false;
   bool is_casted_store = false;
-  size_t start = tmp2.find(" := \"i__load");
+  size_t start = tmp2.find(" := \"i__load\"");
   if(start != std::string::npos) {
     // issue 1:
     //   because pointer offset may apply, we need to print that line, but NOT print
@@ -2141,14 +2125,22 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
     dest_t += tmp2;
     dest_t += "\n        ";
   }
-
+ 
   std::string tmp = convert(src.op1(), precedent);
   std::string token = get_last_tmp(tmp);
+
   if(tmp.find(" := ") != std::string::npos) {
     dest_t += tmp;
     dest_t += "\n        ";
   }
-  if (!is_store)
+
+  std::string lhs_id = src.op0().identifier().as_string();
+  bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+
+  if (lhs_is_global) {
+    dest_t += "tmp := \"i__storegv\"(\"" + id_shorthand(src.op0()) + "\", " + token + ")";
+  } 
+  else if (!is_store)
     dest_t += token2 + " := " + token;
   else {
     // two cases
@@ -2160,9 +2152,8 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
       dest_t += "tmp := \"i__store\"(" + cap_no_cast_get_var(tmp2)  + ", " + token + ")";
     }
   }
-  }
+  
   std::string dest = indent_str(indent) + dest_t + ";";
-  //dest += src.pretty(0);
   return dest;
 }
 
