@@ -1106,32 +1106,6 @@ std::string expr2ct::convert_member(const exprt &src, unsigned precedence)
 
   unsigned p;
   std::string dest;
-
-  if(src.op0().id() == "dereference" && src.operands().size() == 1)
-  {
-    std::string op = convert(src.op0().op0(), p);
-
-    if(precedence > p)
-      dest += '(';
-    dest += op;
-    if(precedence > p)
-      dest += ')';
-
-    dest += "->";
-  }
-  else
-  {
-    std::string op = convert(src.op0(), p);
-
-    if(precedence > p)
-      dest += '(';
-    dest += op;
-    if(precedence > p)
-      dest += ')';
-
-    //dest += '.';
-  }
-
   const typet &full_type = ns.follow(src.op0().type());
 
   // It might be an flattened union
@@ -1142,16 +1116,30 @@ std::string expr2ct::convert_member(const exprt &src, unsigned precedence)
 
   if(full_type.id() != "struct" && full_type.id() != "union")
     return convert_norep(src, precedence);
-
   const struct_typet &struct_type = to_struct_type(full_type);
-
   const exprt comp_expr = struct_type.get_component(src.component_name());
 
   if(comp_expr.is_nil())
     return convert_norep(src, precedence);
 
-  //dest += comp_expr.pretty_name().as_string();
+   const irep_idt &tag = struct_type.tag().as_string();
+   std::string struct_name = id2string(tag).substr(7);
 
+  if(src.op0().id() == "dereference" && src.operands().size() == 1) {
+    std::string instance_name = convert(src.op0().op0(), p);
+    if (instance_name.find(" := ") != std::string::npos) {
+      dest += instance_name;
+      dest += "\n";
+      instance_name = instance_name.substr(0, instance_name.find(" := "));
+    }
+    dest += "        tmp_" + std::to_string(cnt++) + " := \"";
+    dest += struct_name + "_load_" + comp_expr.pretty_name().as_string() + "\"(" + instance_name + ");";
+  }
+  else {
+    std::string instance_name = convert(src.op0(), p);
+    dest += "        tmp_" + std::to_string(cnt++) + " := \"";
+    dest += struct_name + "_get_" + comp_expr.pretty_name().as_string() + "\"(" + instance_name + ");";
+  }
   return dest;
 }
 
@@ -1863,14 +1851,8 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
   }
 
   const typet &followed = ns.follow(src.op0().type());
-  if(followed.id() == "struct")
-  {
-    const std::string &tag = followed.tag().as_string();
-    if(tag != "")
-      dest += tag + " ";
-    dest += declarator;
-  }
-  else if(followed.id() == "union")
+
+    if(followed.id() == "union")
   {
     const std::string &tag = followed.tag().as_string();
     if(tag != "")
@@ -1883,22 +1865,23 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
 
   if(src.operands().size() == 2)
     dest += "=" + convert(src.op1());
-
   dest += ';';
   
-  //auto test = src.type().to_string();
-
+  const typet sub = ns.follow(followed.subtype());
   if (followed.id() == "struct") {
-    finaldest += declarator + " := {{ undefined";
-    size_t pos = followed.components().pretty(0).rfind("component");
-    int n = stoi(followed.components().pretty(0).substr(pos-3, 1));
-    for (int i = 1; i <= n; i++) finaldest += ", undefined";
-    finaldest += " }};";
+    const typet &full_type = ns.follow(src.op0().type());
+    const struct_typet &struct_type = to_struct_type(full_type);
+    const irep_idt &tag = struct_type.tag().as_string();
+    std::string struct_name = id2string(tag).substr(7);
+    finaldest += declarator + " := \"" + struct_name + "_declare\"();";
   }
-
+  else if (followed.id() == "pointer" && sub.id()=="struct") {
+    const irep_idt &tag = sub.tag();
+    std::string struct_name = id2string(tag).substr(7);
+    finaldest += declarator + " := \"" + struct_name + "_declare_cap\"();";
+  }
   else finaldest += declarator + " := undefined; (* " + dest + " *)";
-
-
+  
   return finaldest;
 }
 
@@ -2099,6 +2082,9 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
   bool is_store = false;
   bool is_casted_store = false;
   size_t start = tmp2.find(" := \"i__load\"");
+  bool lhs_struct = false;
+  size_t start_get = tmp2.find("_get_");
+  size_t start_load = tmp2.find("_load_");
   if(start != std::string::npos) {
     // issue 1:
     //   because pointer offset may apply, we need to print that line, but NOT print
@@ -2121,11 +2107,18 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
     is_store = true;
     if(tmp2.find(" := \"i__unops_cast") != std::string::npos)
       is_casted_store = true;
-  } else if (tmp2.find(" := ") != std::string::npos) {
+    } 
+  
+    // structs on lhs
+    else if (start_get != std::string::npos || start_load != std::string::npos) {
+      lhs_struct = true; 
+    }
+
+    if (tmp2.find(" := ") != std::string::npos) {
     dest_t += tmp2;
     dest_t += "\n        ";
-  }
- 
+    }
+  
   std::string tmp = convert(src.op1(), precedent);
   std::string token = get_last_tmp(tmp);
 
@@ -2136,12 +2129,38 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
 
   std::string lhs_id = src.op0().identifier().as_string();
   bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+  
+  /* convert_symbol currently assumes that a global variable is being read, rather than written
+   * so, if op0 is global, we rearrange that code such that a store is performed instead */
 
   if (lhs_is_global) {
     dest_t += "tmp := \"i__storegv\"(\"" + id_shorthand(src.op0()) + "\", " + token + ")";
   } 
-  else if (!is_store)
+  else if (!is_store && !lhs_struct)
     dest_t += token2 + " := " + token;
+  else if (lhs_struct) {
+    std::string op;
+    std::string lhs;
+    std::string comp_name = src.op0().component_name().as_string();
+    const typet &full_type = ns.follow(src.op0().op0().type());
+    const struct_typet &struct_type = to_struct_type(full_type);
+    const irep_idt &tag = struct_type.tag().as_string();
+    std::string struct_name = id2string(tag).substr(7);
+    // rip the struct type name out of tmp2
+    size_t end = src.op0().op0().is_dereference() ? start_load : start_get;
+    std::string instance_name = tmp2.substr(end+5);
+    instance_name = instance_name.substr(instance_name.find("(")+1);
+    instance_name = instance_name.substr(0,instance_name.find(")"));
+    if (src.op0().op0().is_dereference()) {
+      op = "store";
+      lhs = "tmp";
+    } 
+    else {
+      op = "set";
+      lhs = instance_name;
+    }
+    dest_t += lhs + " := \"" + struct_name + "_" + op + "_" + comp_name + "\"(" + instance_name + ", " + token + ")";
+  }
   else {
     // two cases
     // case 1: casted pointer
