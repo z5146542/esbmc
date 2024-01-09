@@ -2114,7 +2114,9 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
       lhs_struct = true; 
     }
 
-    if (tmp2.find(" := ") != std::string::npos) {
+    std::string lhs_id = src.op0().identifier().as_string();
+    bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+    if (tmp2.find(" := ") != std::string::npos && !lhs_is_global) {
     dest_t += tmp2;
     dest_t += "\n        ";
     }
@@ -2127,8 +2129,8 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
     dest_t += "\n        ";
   }
 
-  std::string lhs_id = src.op0().identifier().as_string();
-  bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+  //std::string lhs_id = src.op0().identifier().as_string();
+  //bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
   
   /* convert_symbol currently assumes that a global variable is being read, rather than written
    * so, if op0 is global, we rearrange that code such that a store is performed instead */
