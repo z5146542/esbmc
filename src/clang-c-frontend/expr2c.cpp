@@ -771,6 +771,8 @@ std::string expr2ct::convert_binary(
     op_str = "i__binops_sub";
   else if (symbol == "&")
     op_str = "i__binops_bitwiseand";
+  else if (symbol =="|")
+    op_str = "i__binops_bitwiseor";
   else if (symbol == "<<")
     op_str = "i__binops_leftshift";
   else if (symbol == "&&")
@@ -813,6 +815,10 @@ std::string expr2ct::convert_unary(
     op_str = "i__unops_negb";
   else if (symbol == "*")
     op_str = "i__load";
+  else if (symbol == "~")
+    op_str = "i__unops_bitwisenot";
+  else if (symbol == "-")
+    op_str = "i__unops_neg";
   else
     op_str = "i__undefined_" + symbol;
 
@@ -1621,6 +1627,7 @@ std::string expr2ct::convert_code_asm(const codet &, unsigned indent)
 
 std::string expr2ct::convert_code_while(const codet &src, unsigned indent)
 {
+
   if(src.operands().size() != 2)
   {
     unsigned precedence;
@@ -1637,7 +1644,6 @@ std::string expr2ct::convert_code_while(const codet &src, unsigned indent)
     dest += ")\n";
     dest += convert_code(to_code(src.op1()), indent + 2);
   }
-
   dest += "\n";
 
   return dest;
@@ -2127,7 +2133,6 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
 
   /* convert_symbol currently assumes that a global variable is being read, rather than written
    * so, if op0 is global, we rearrange that code such that a store is performed instead */
-
   if (lhs_is_global) {
     dest_t += "tmp := \"i__storegv\"(\"" + id_shorthand(src.op0()) + "\", " + token + ")";
   } 
@@ -2236,10 +2241,18 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
 
   std::string dest;
   std::string dest_t;
+  std::string stores;
   if(src.lhs().is_not_nil())
   {
     unsigned p;
     std::string lhs_str = convert(src.lhs(), p);
+    std::string lhs_id = src.lhs().identifier().as_string();
+    bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+    if (lhs_is_global) {
+      stores += ";\n        ";
+      lhs_str = lhs_id.substr(lhs_id.find("c:@")+3);
+      stores += "tmp := \"i__storegv\"(\"" + lhs_str + "\", " + lhs_str + ")";
+    }
 
     // TODO: [add] brackets, if necessary, depending on p
     dest += lhs_str;
@@ -2255,7 +2268,7 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
     unsigned p;
     std::string function_str = convert(src.function(), p);
     // for some special calls, we do some slight conversion.
-    if(function_str == "memcpy" || function_str == "memmove")
+    if(function_str == "memcpy" || function_str == "memmove" || function_str == "mmap")
       function_str = "i__" + function_str;
     dest += function_str;
   }
@@ -2277,6 +2290,8 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
     if(arg_str.find(" := ") != std::string::npos) {
       dest_t += arg_str;
       dest_t += "\n        ";
+      std::string arg_id = (*it).identifier().as_string();
+      bool is_glovar = std::count(arg_id.begin(), arg_id.end(), '@') == 1;
       dest += get_last_tmp(arg_str);
     } else 
       dest += arg_str;
@@ -2286,6 +2301,7 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
 
   dest += ")";
   dest_t += dest;
+  dest_t += stores;
   return dest_t;
 }
 

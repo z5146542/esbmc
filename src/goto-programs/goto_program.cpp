@@ -225,8 +225,8 @@ void goto_programt::instructiont::output_instruction(
     break;
 
   case LOCATION:
-    out << "LOCATION"
-        << "\n";
+    //out << "LOCATION"
+    //    << "\n";
     break;
 
   case THROW:

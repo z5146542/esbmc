@@ -179,6 +179,8 @@ void clang_c_languaget::build_compiler_args(const std::string &tmp_dir)
     compiler_args.emplace_back(
       "-D__builtin_cheri_representable_length(len)=i__cheri_representable_length(len)");
     compiler_args.emplace_back(
+      "-D__builtin_cheri_round_representable_length(len)=i__cheri_representable_length(len)");
+    compiler_args.emplace_back(
       "-D__builtin_cheri_representable_alignment_mask(len)=i__cheri_representable_alignment_mask(len)");
     compiler_args.emplace_back(
       "-D__builtin_align_up(p,a)=i__builtin_align_up(p,a)");
