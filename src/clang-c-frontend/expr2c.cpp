@@ -946,7 +946,7 @@ std::string expr2ct::convert_nondet(const exprt &src, unsigned &precedence)
     typ = "int8";
   } else if (typ == "unsigned short") {
     typ = "uint16";
-  } else if (typ == "signed short") {
+  } else if (typ == "signed short int") {
     typ = "int16";
   } else if (typ == "unsigned int") {
     typ = "uint32";
