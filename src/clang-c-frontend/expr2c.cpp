@@ -513,7 +513,41 @@ std::string expr2ct::convert_trinary(
 {
   if(src.operands().size() != 3)
     return convert_norep(src, precedence);
-
+  
+  if (src.id() == "if") {
+    const exprt::operandst &operands = src.operands();
+    const exprt &op0 = operands.front();
+    const exprt &op1 = *(++operands.begin());
+    const exprt &op2 = operands.back();
+    unsigned p0, p1, p2;
+    std::string s_op0 = convert(op0, p0);
+    std::string s_op1 = convert(op1, p1);
+    std::string s_op2 = convert(op2, p2);
+    std::string cond = get_last_tmp(s_op0);
+    std::string dest;
+    dest += s_op0;
+    //dest += s_op1;
+    std::string tokent = get_last_tmp(s_op1);
+    dest += s_op1.find(" := ") != std::string::npos ? s_op1 + "\n        " : "";
+    std::string tmpt = "tmp_" + std::to_string(cnt++);
+    dest += tmpt + " := " + tokent + ";\n";
+    dest += s_op2.find(" := ") != std::string::npos ? s_op2 + "\n        " : "";
+    std::string tmpf = "tmp_" + std::to_string(cnt++);
+    std::string tokenf = get_last_tmp(s_op2);
+    dest += tmpf + " := " + tokenf + ";\n";
+    dest += "\n";
+    std::string num = std::to_string(cnt++);
+    std::string tmp = "tmp_" + num; 
+    dest += indent_str(8) + "vtb := \"i__bool_of_value\"(" + cond + ");\n";
+    dest += indent_str(8) + "goto [ vtb ] " + "t" + num +"t " + " t" + num + "f" +";\n";
+    dest += indent_str(2) + "t" + num + "t: " + tmp + " := " + tmpt + ";\n";
+    dest += indent_str(8) + "goto " + "t" + num + "d;\n";
+    dest += indent_str(2) + "t" + num + "f: " + tmp + " := " + tmpf + ";\n"; 
+    dest += indent_str(2) + "t" + num + "d: tmp_" + std::to_string(cnt++) + " := " + tmp + ";\n";
+	    
+    return dest;
+  }
+  else {
   const exprt::operandst &operands = src.operands();
   const exprt &op0 = operands.front();
   const exprt &op1 = *(++operands.begin());
@@ -554,6 +588,7 @@ std::string expr2ct::convert_trinary(
     dest += ')';
 
   return dest;
+  }
 }
 
 std::string expr2ct::convert_quantifier(
@@ -775,8 +810,14 @@ std::string expr2ct::convert_binary(
     op_str = "i__binops_bitwiseor";
   else if (symbol == "<<")
     op_str = "i__binops_leftshift";
+  else if (symbol == ">>")
+    op_str = "i__binops_rightshift";
   else if (symbol == "&&")
     op_str = "i__binops_and";
+  else if (symbol == "%")
+    op_str = "i__binops_mod";
+  else if (symbol == "/")
+    op_str = "i__binops_div";
   else
     op_str = "i__undefined_" + symbol;
   dest += "tmp_" + std::to_string(cnt++) + " := \"" + op_str + "\"(" + arg1 + ", " + arg2 + ");";
@@ -2126,6 +2167,11 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
   std::string tmp = convert(src.op1(), precedent);
   std::string token = get_last_tmp(tmp);
 
+  if (src.op1().id() == "if") {
+     int idx = tmp.find("d: ")+3;
+     token = tmp.substr(idx, 5);
+  }
+
   if(tmp.find(" := ") != std::string::npos) {
     dest_t += tmp;
     dest_t += "\n        ";
@@ -2566,7 +2612,9 @@ std::string expr2ct::convert(const exprt &src, unsigned &precedence)
 
   else if(src.id() == "same-object")
   {
-    return convert_function(src, "SAME-OBJECT", precedence = 15);
+    //return convert_function(src, "SAME-OBJECT", precedence = 15);
+    return "{{ \"int32\", 1i }}";
+    
   }
 
   else if(src.id() == "valid_object")
