@@ -204,6 +204,7 @@ void goto_functionst::output(const namespacet &ns, std::ostream &out) const
           << "("/* << from_type(ns, symbol-<id, symbol->type)*/
           << symbol->type.get_args(true) << ") {";
       out << "\n";
+      if (symbol->name.as_string() == "main") { out << "        tmp := \"genv_init\"();\n"; }
       it.second.body.output(ns, symbol->id, out);
     }
   }

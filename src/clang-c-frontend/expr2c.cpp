@@ -513,7 +513,41 @@ std::string expr2ct::convert_trinary(
 {
   if(src.operands().size() != 3)
     return convert_norep(src, precedence);
-
+  
+  if (src.id() == "if") {
+    const exprt::operandst &operands = src.operands();
+    const exprt &op0 = operands.front();
+    const exprt &op1 = *(++operands.begin());
+    const exprt &op2 = operands.back();
+    unsigned p0, p1, p2;
+    std::string s_op0 = convert(op0, p0);
+    std::string s_op1 = convert(op1, p1);
+    std::string s_op2 = convert(op2, p2);
+    std::string cond = get_last_tmp(s_op0);
+    std::string dest;
+    dest += s_op0;
+    //dest += s_op1;
+    std::string tokent = get_last_tmp(s_op1);
+    dest += s_op1.find(" := ") != std::string::npos ? s_op1 + "\n        " : "";
+    std::string tmpt = "tmp_" + std::to_string(cnt++);
+    dest += tmpt + " := " + tokent + ";\n";
+    dest += s_op2.find(" := ") != std::string::npos ? s_op2 + "\n        " : "";
+    std::string tmpf = "tmp_" + std::to_string(cnt++);
+    std::string tokenf = get_last_tmp(s_op2);
+    dest += tmpf + " := " + tokenf + ";\n";
+    dest += "\n";
+    std::string num = std::to_string(cnt++);
+    std::string tmp = "tmp_" + num; 
+    dest += indent_str(8) + "vtb := \"i__bool_of_value\"(" + cond + ");\n";
+    dest += indent_str(8) + "goto [ vtb ] " + "t" + num +"t " + " t" + num + "f" +";\n";
+    dest += indent_str(2) + "t" + num + "t: " + tmp + " := " + tmpt + ";\n";
+    dest += indent_str(8) + "goto " + "t" + num + "d;\n";
+    dest += indent_str(2) + "t" + num + "f: " + tmp + " := " + tmpf + ";\n"; 
+    dest += indent_str(2) + "t" + num + "d: tmp_" + std::to_string(cnt++) + " := " + tmp + ";\n";
+	    
+    return dest;
+  }
+  else {
   const exprt::operandst &operands = src.operands();
   const exprt &op0 = operands.front();
   const exprt &op1 = *(++operands.begin());
@@ -554,6 +588,7 @@ std::string expr2ct::convert_trinary(
     dest += ')';
 
   return dest;
+  }
 }
 
 std::string expr2ct::convert_quantifier(
@@ -771,10 +806,18 @@ std::string expr2ct::convert_binary(
     op_str = "i__binops_sub";
   else if (symbol == "&")
     op_str = "i__binops_bitwiseand";
+  else if (symbol =="|")
+    op_str = "i__binops_bitwiseor";
   else if (symbol == "<<")
     op_str = "i__binops_leftshift";
+  else if (symbol == ">>")
+    op_str = "i__binops_rightshift";
   else if (symbol == "&&")
     op_str = "i__binops_and";
+  else if (symbol == "%")
+    op_str = "i__binops_mod";
+  else if (symbol == "/")
+    op_str = "i__binops_div";
   else
     op_str = "i__undefined_" + symbol;
   dest += "tmp_" + std::to_string(cnt++) + " := \"" + op_str + "\"(" + arg1 + ", " + arg2 + ");";
@@ -813,6 +856,10 @@ std::string expr2ct::convert_unary(
     op_str = "i__unops_negb";
   else if (symbol == "*")
     op_str = "i__load";
+  else if (symbol == "~")
+    op_str = "i__unops_bitwisenot";
+  else if (symbol == "-")
+    op_str = "i__unops_neg";
   else
     op_str = "i__undefined_" + symbol;
 
@@ -940,7 +987,7 @@ std::string expr2ct::convert_nondet(const exprt &src, unsigned &precedence)
     typ = "int8";
   } else if (typ == "unsigned short") {
     typ = "uint16";
-  } else if (typ == "signed short") {
+  } else if (typ == "signed short int") {
     typ = "int16";
   } else if (typ == "unsigned int") {
     typ = "uint32";
@@ -1106,32 +1153,6 @@ std::string expr2ct::convert_member(const exprt &src, unsigned precedence)
 
   unsigned p;
   std::string dest;
-
-  if(src.op0().id() == "dereference" && src.operands().size() == 1)
-  {
-    std::string op = convert(src.op0().op0(), p);
-
-    if(precedence > p)
-      dest += '(';
-    dest += op;
-    if(precedence > p)
-      dest += ')';
-
-    dest += "->";
-  }
-  else
-  {
-    std::string op = convert(src.op0(), p);
-
-    if(precedence > p)
-      dest += '(';
-    dest += op;
-    if(precedence > p)
-      dest += ')';
-
-    dest += '.';
-  }
-
   const typet &full_type = ns.follow(src.op0().type());
 
   // It might be an flattened union
@@ -1142,16 +1163,30 @@ std::string expr2ct::convert_member(const exprt &src, unsigned precedence)
 
   if(full_type.id() != "struct" && full_type.id() != "union")
     return convert_norep(src, precedence);
-
   const struct_typet &struct_type = to_struct_type(full_type);
-
   const exprt comp_expr = struct_type.get_component(src.component_name());
 
   if(comp_expr.is_nil())
     return convert_norep(src, precedence);
 
-  dest += comp_expr.pretty_name().as_string();
+   const irep_idt &tag = struct_type.tag().as_string();
+   std::string struct_name = id2string(tag).substr(7);
 
+  if(src.op0().id() == "dereference" && src.operands().size() == 1) {
+    std::string instance_name = convert(src.op0().op0(), p);
+    if (instance_name.find(" := ") != std::string::npos) {
+      dest += instance_name;
+      dest += "\n";
+      instance_name = instance_name.substr(0, instance_name.find(" := "));
+    }
+    dest += "        tmp_" + std::to_string(cnt++) + " := \"";
+    dest += struct_name + "_load_" + comp_expr.pretty_name().as_string() + "\"(" + instance_name + ");";
+  }
+  else {
+    std::string instance_name = convert(src.op0(), p);
+    dest += "        tmp_" + std::to_string(cnt++) + " := \"";
+    dest += struct_name + "_get_" + comp_expr.pretty_name().as_string() + "\"(" + instance_name + ");";
+  }
   return dest;
 }
 
@@ -1183,9 +1218,29 @@ std::string expr2ct::convert_symbol(const exprt &src, unsigned &)
   const irep_idt &id = src.identifier();
   // previously, we made changes here to check whether a var is global or not
   // const symbolt *symbol = ns.lookup(id);
-  std::string dest;
+  std::string id_string = id.as_string();
+  bool is_global = std::count(id_string.begin(), id_string.end(), '@') == 1;
 
-  if(!fullname && ns_collision.find(id) == ns_collision.end())
+  std::string dest;
+  if (is_global) {
+    std::string typ = src.type().to_string();
+    if (src.type().id()=="pointer") typ = "cap";
+    else if(src.type().id() == "unsignedbv" || src.type().id() == "signedbv") {
+      typ = src.type().id() == "unsignedbv" ? "uint" : "int";
+      // TODO: HERE, WE ADD TYPE INFORMATION
+      // (un)signedbv determines signedness
+      // width determines size
+      // - width = 8 ==> char
+      // - width = 16 ==> short
+      // - width = 32 ==> int
+      // - width = 64 ==> long
+      std::string siz = src.type().to_string().substr(src.type().to_string().find("width: ") + 7);
+      typ += siz;
+    }
+    dest = id_shorthand(src) + " := \"i__loadgv\"(\"" + id_shorthand(src) + "\", \"" + typ + "\");";
+  }
+
+  else if(!fullname && ns_collision.find(id) == ns_collision.end())
     dest = id_shorthand(src);
   else
     dest = id2string(id);
@@ -1613,6 +1668,7 @@ std::string expr2ct::convert_code_asm(const codet &, unsigned indent)
 
 std::string expr2ct::convert_code_while(const codet &src, unsigned indent)
 {
+
   if(src.operands().size() != 2)
   {
     unsigned precedence;
@@ -1629,7 +1685,6 @@ std::string expr2ct::convert_code_while(const codet &src, unsigned indent)
     dest += ")\n";
     dest += convert_code(to_code(src.op1()), indent + 2);
   }
-
   dest += "\n";
 
   return dest;
@@ -1843,14 +1898,8 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
   }
 
   const typet &followed = ns.follow(src.op0().type());
-  if(followed.id() == "struct")
-  {
-    const std::string &tag = followed.tag().as_string();
-    if(tag != "")
-      dest += tag + " ";
-    dest += declarator;
-  }
-  else if(followed.id() == "union")
+
+    if(followed.id() == "union")
   {
     const std::string &tag = followed.tag().as_string();
     if(tag != "")
@@ -1863,11 +1912,19 @@ std::string expr2ct::convert_code_decl(const codet &src, unsigned indent)
 
   if(src.operands().size() == 2)
     dest += "=" + convert(src.op1());
-
   dest += ';';
+  
+  const typet sub = ns.follow(followed.subtype());
+  if (followed.id() == "struct") {
+    const typet &full_type = ns.follow(src.op0().type());
+    const struct_typet &struct_type = to_struct_type(full_type);
+    const irep_idt &tag = struct_type.tag().as_string();
+    std::string struct_name = id2string(tag).substr(7);
+    finaldest += declarator + " := \"" + struct_name + "_declare\"();";
+  }
 
-  finaldest += declarator + " := undefined; (* " + dest + " *)";
-
+  else finaldest += declarator + " := undefined; (* " + dest + " *)";
+  
   return finaldest;
 }
 
@@ -2062,11 +2119,15 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
   // We only print the RHS, then perform a "i__store" instead, giving the last
   // tmp as the value argument.
   // Note that store technically does not return, so we a generic tmp is used.
+
   std::string tmp2 = convert(src.op0(), precedent);
   std::string token2 = get_last_tmp(tmp2);
   bool is_store = false;
   bool is_casted_store = false;
-  size_t start = tmp2.find(" := \"i__load");
+  size_t start = tmp2.find(" := \"i__load\"");
+  bool lhs_struct = false;
+  size_t start_get = tmp2.find("_get_");
+  size_t start_load = tmp2.find("_load_");
   if(start != std::string::npos) {
     // issue 1:
     //   because pointer offset may apply, we need to print that line, but NOT print
@@ -2089,19 +2150,63 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
     is_store = true;
     if(tmp2.find(" := \"i__unops_cast") != std::string::npos)
       is_casted_store = true;
-  } else if (tmp2.find(" := ") != std::string::npos) {
+    } 
+  
+    // structs on lhs
+    else if (start_get != std::string::npos || start_load != std::string::npos) {
+      lhs_struct = true; 
+    }
+
+    std::string lhs_id = src.op0().identifier().as_string();
+    bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+    if (tmp2.find(" := ") != std::string::npos && !lhs_is_global) {
     dest_t += tmp2;
     dest_t += "\n        ";
-  }
-
+    }
+  
   std::string tmp = convert(src.op1(), precedent);
   std::string token = get_last_tmp(tmp);
+
+  if (src.op1().id() == "if") {
+     int idx = tmp.find("d: ")+3;
+     token = tmp.substr(idx, 5);
+  }
+
   if(tmp.find(" := ") != std::string::npos) {
     dest_t += tmp;
     dest_t += "\n        ";
   }
-  if (!is_store)
+
+  /* convert_symbol currently assumes that a global variable is being read, rather than written
+   * so, if op0 is global, we rearrange that code such that a store is performed instead */
+  if (lhs_is_global) {
+    dest_t += "tmp := \"i__storegv\"(\"" + id_shorthand(src.op0()) + "\", " + token + ")";
+  } 
+  else if (!is_store && !lhs_struct)
     dest_t += token2 + " := " + token;
+  else if (lhs_struct) {
+    std::string op;
+    std::string lhs;
+    std::string comp_name = src.op0().component_name().as_string();
+    const typet &full_type = ns.follow(src.op0().op0().type());
+    const struct_typet &struct_type = to_struct_type(full_type);
+    const irep_idt &tag = struct_type.tag().as_string();
+    std::string struct_name = id2string(tag).substr(7);
+    // rip the struct type name out of tmp2
+    size_t end = src.op0().op0().is_dereference() ? start_load : start_get;
+    std::string instance_name = tmp2.substr(end+5);
+    instance_name = instance_name.substr(instance_name.find("(")+1);
+    instance_name = instance_name.substr(0,instance_name.find(")"));
+    if (src.op0().op0().is_dereference()) {
+      op = "store";
+      lhs = "tmp";
+    } 
+    else {
+      op = "set";
+      lhs = instance_name;
+    }
+    dest_t += lhs + " := \"" + struct_name + "_" + op + "_" + comp_name + "\"(" + instance_name + ", " + token + ")";
+  }
   else {
     // two cases
     // case 1: casted pointer
@@ -2112,7 +2217,7 @@ std::string expr2ct::convert_code_assign(const codet &src, unsigned indent)
       dest_t += "tmp := \"i__store\"(" + cap_no_cast_get_var(tmp2)  + ", " + token + ")";
     }
   }
-
+  
   std::string dest = indent_str(indent) + dest_t + ";";
   return dest;
 }
@@ -2182,10 +2287,18 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
 
   std::string dest;
   std::string dest_t;
+  std::string stores;
   if(src.lhs().is_not_nil())
   {
     unsigned p;
     std::string lhs_str = convert(src.lhs(), p);
+    std::string lhs_id = src.lhs().identifier().as_string();
+    bool lhs_is_global = std::count(lhs_id.begin(), lhs_id.end(), '@') == 1;
+    if (lhs_is_global) {
+      stores += ";\n        ";
+      lhs_str = lhs_id.substr(lhs_id.find("c:@")+3);
+      stores += "tmp := \"i__storegv\"(\"" + lhs_str + "\", " + lhs_str + ")";
+    }
 
     // TODO: [add] brackets, if necessary, depending on p
     dest += lhs_str;
@@ -2201,7 +2314,7 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
     unsigned p;
     std::string function_str = convert(src.function(), p);
     // for some special calls, we do some slight conversion.
-    if(function_str == "memcpy" || function_str == "memmove")
+    if(function_str == "memcpy" || function_str == "memmove" || function_str == "mmap")
       function_str = "i__" + function_str;
     dest += function_str;
   }
@@ -2223,6 +2336,8 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
     if(arg_str.find(" := ") != std::string::npos) {
       dest_t += arg_str;
       dest_t += "\n        ";
+      std::string arg_id = (*it).identifier().as_string();
+      bool is_glovar = std::count(arg_id.begin(), arg_id.end(), '@') == 1;
       dest += get_last_tmp(arg_str);
     } else 
       dest += arg_str;
@@ -2232,6 +2347,7 @@ expr2ct::convert_code_function_call(const code_function_callt &src, unsigned)
 
   dest += ")";
   dest_t += dest;
+  dest_t += stores;
   return dest_t;
 }
 
@@ -2496,7 +2612,9 @@ std::string expr2ct::convert(const exprt &src, unsigned &precedence)
 
   else if(src.id() == "same-object")
   {
-    return convert_function(src, "SAME-OBJECT", precedence = 15);
+    //return convert_function(src, "SAME-OBJECT", precedence = 15);
+    return "{{ \"int32\", 1i }}";
+    
   }
 
   else if(src.id() == "valid_object")
